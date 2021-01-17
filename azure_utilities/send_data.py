@@ -1,3 +1,1 @@
-from azure.common.client_factory import get_client_from_cli_profile
-from azure.mgmt.resource import ResourceManagementClient
-from azure.mgmt.sql import SqlManagementClient
+from base_classes.send_data import SendData
