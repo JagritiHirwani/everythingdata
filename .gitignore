@@ -1,2 +1,5 @@
 .idea
 venv/
+
+azure_utilities/__pycache__/
+azure_utilities/logs/
