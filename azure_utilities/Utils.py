@@ -1,6 +1,7 @@
 from azure_utilities import logger
 import names
 import os
+from azure_utilities.azure_sql.azure_sql import AzureSQL
 
 
 def az_cli(args_str, return_result=True):
@@ -144,3 +145,9 @@ if __name__ == "__main__":
            'password': 'lVKjqCd._lwh93uA.STxv8zS70u2xsE4dG',
            'tenant': 'bb7d3766-d430-4c13-8dc7-e8f0d774c1bb'}
     login(service_principal_login=True, SP_credentials=app)
+    az_sql = AzureSQL()
+    az_sql.create_sql_db(database_name="sajaldb",
+                         create_new_server=True,
+                         sql_server_name="sajal-server",
+                         resource_group_name="sql-grp-new",
+                         set_firewall_rules=True)
