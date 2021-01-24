@@ -3,3 +3,6 @@ venv/
 
 azure_utilities/__pycache__/
 azure_utilities/logs/
+
+ common/__pycache__/
+.DS_Store

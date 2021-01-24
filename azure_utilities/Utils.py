@@ -2,6 +2,7 @@ from azure_utilities import logger
 import names
 import os
 from azure_utilities.azure_sql.azure_sql import AzureSQL
+from common.sql_utilities import *
 
 
 def az_cli(args_str, return_result=True):
@@ -151,3 +152,5 @@ if __name__ == "__main__":
                          sql_server_name="sajal-server",
                          resource_group_name="sql-grp-new",
                          set_firewall_rules=True)
+    az_sql.set_jdbc_url()
+    az_sql.check_connection()

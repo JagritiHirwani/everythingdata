@@ -1,5 +1,6 @@
 import os
 from base_classes.send_data import SendToSql
+from common.sql_utilities import create_jdbc_url, check_connection
 
 try:
     from azure.common.client_factory import get_client_from_cli_profile
@@ -46,6 +47,7 @@ class AzureSQL(SendToSql):
         self.sql_client      = None
         self.resource_client = None
         self.db_object       = None
+        self.jdbc_url        = None
 
         self.validate_sp_login()
 
@@ -76,8 +78,16 @@ class AzureSQL(SendToSql):
         self.username        = username
         self.password        = password
 
-    def check_connection(self):
-        pass
+    def check_connection(self, **options):
+        """
+        Check connection to your database
+        :return:
+        """
+        print("Checking connection....")
+        assert self.jdbc_url or options.get('jdbc_url'), "JDBC URL is not set or not provided"
+        if check_connection(jdbc_url=self.jdbc_url or options.get('jdbc_url'),
+                            user_cred={'user': self.username, 'password': self.password}):
+            print(f"Successfully Connected :D, serverName -> {self.sql_server_name}")
 
     def create_schema(self):
         pass
@@ -101,6 +111,7 @@ class AzureSQL(SendToSql):
         self.validate_sp_login()
         print("Creating DB...")
         assert options.get('database_name'), "Provide database name using database_name param"
+        self.sql_db = options.get('database_name')
 
         # You MIGHT need to add SQL as a valid provider for these credentials
         # If so, this operation has to be done only once for each credential
@@ -141,15 +152,19 @@ class AzureSQL(SendToSql):
         :return:
         """
         print("Creating Server Instance... This might take 4-5 minutes")
+
         self.sql_server_name = sql_server_name if sql_server_name else self.sql_server_name
+        self.username = options.get('username') or self.username or "test"
+        self.password = options.get('admin_password') or self.password or "MyPassword1@"
+
         server_details = self.sql_client.servers.create_or_update(
             self.default_RG,
             self.sql_server_name,
             {
                 'location': options.get('region') or self.region,
                 'version': '12.0',
-                'administrator_login': options.get('admin_username') or "test",
-                'administrator_login_password': options.get('admin_password') or "MyPassword1@"
+                'administrator_login': self.username,
+                'administrator_login_password': self.password
             }
         )
 
@@ -178,7 +193,7 @@ class AzureSQL(SendToSql):
             ip = requests.get('https://checkip.amazonaws.com').text.strip()
             print(f"Starting IP and ending IP is not given, using current IP of the system which is {ip}")
         try:
-            firewall_rule = self.sql_client.servers.create_or_update_firewall_rule(
+            firewall_rule = self.sql_client.firewall_rules.create_or_update(
                 self.default_RG,
                 options.get('server_name') or self.sql_server_name,
                 f"firewall_rule_for_{ip}" if ip else f"firewall_from_{starting_ip}_to_{ending_ip}",
@@ -186,7 +201,7 @@ class AzureSQL(SendToSql):
                 f"{ip}" if ip else f"{ending_ip}"
             )
         except Exception as err:
-            print(f"Error creating firewall rule, info -> {err.args}")
+            print(f"Error creating firewall rule, info -> {err.args[0]}")
         finally:
             print(f"Firewall rule created, info -> {firewall_rule}")
             return firewall_rule
@@ -207,6 +222,18 @@ class AzureSQL(SendToSql):
     def commit_data(self):
         pass
 
+    def set_jdbc_url(self):
+        """
+        Create JDBC URL of your database
+        :return:
+        """
+        self.jdbc_url = create_jdbc_url(
+            host_name     = f"{self.sql_server_name}.database.windows.net",
+            database_name = self.sql_db,
+            username      = f"{self.username}@{self.sql_server_name}",
+            password      = self.password
+        ) + "hostNameInCertificate=*.database.windows.net;loginTimeout=30;"
+
     def validate_sp_login(self):
         """
         Validate if the user has logged in using his service principal credentials and the env variables are set or not
@@ -215,6 +242,6 @@ class AzureSQL(SendToSql):
         assert self.subscription_id and self.client_id and self.client_secret and self.tenant_id, \
             f"Please login using 'login' method and passing your service principal credentials, as AzureSQL " \
             f"class uses SP_credentials which are exported as environment variables, and current values of those " \
-            f"variables " \
-            f"are subscription_id -> {self.subscription_id}, tenant_id -> {self.tenant_id}, client_id -> {self.client_id}," \
+            f"variables are subscription_id -> {self.subscription_id}, tenant_id -> {self.tenant_id}," \
+            f"client_id -> {self.client_id}," \
             f"client_secret -> {self.client_secret}"
