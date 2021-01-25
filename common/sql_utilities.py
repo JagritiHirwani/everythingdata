@@ -1,5 +1,7 @@
 import jaydebeapi
 import os
+from package_utils import ROOT_DIR
+
 
 def create_jdbc_url(host_name, username, password, database_name):
     """
@@ -31,14 +33,17 @@ def check_connection(jdbc_url, user_cred, **options):
         )
         curs = conn.cursor()
 
+        print("Trying to creating a temp table...")
         curs.execute('create table CUSTOMER'
                      '("CUST_ID" INTEGER not null,'
                      ' "NAME" VARCHAR(50) not null,'
                      ' primary key ("CUST_ID"))'
                      )
+        print("Table created successfully")
         curs.execute("insert into CUSTOMER values (?, ?)", (1, 'John'))
         curs.execute("select * from CUSTOMER")
         curs.fetchall()
+        print("Dropping table...")
         curs.execute('DROP table CUSTOMER')
         curs.close()
         conn.close()
@@ -56,6 +61,9 @@ def get_jar_path(version=8):
     :param version: 8 | 11 | 14, 8 is default
     :return: String, path to the jar file
     """
-    ROOT_DIR = os.path.abspath(os.curdir)
     assert version in [8, 11, 14], "Version should be 8 or 11 or 14"
     return f"{ROOT_DIR}/common/sql_driver_jars/mssql-jdbc-8.4.1.jre{version}.jar"
+
+
+if __name__ == "__main__":
+    print(get_jar_path())

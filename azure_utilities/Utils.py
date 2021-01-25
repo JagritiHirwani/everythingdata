@@ -1,6 +1,5 @@
 from azure_utilities import logger
 import names
-import os
 from azure_utilities.azure_sql.azure_sql import AzureSQL
 from common.sql_utilities import *
 
@@ -147,10 +146,10 @@ if __name__ == "__main__":
            'tenant': 'bb7d3766-d430-4c13-8dc7-e8f0d774c1bb'}
     login(service_principal_login=True, SP_credentials=app)
     az_sql = AzureSQL()
-    az_sql.create_sql_db(database_name="sajaldb",
-                         create_new_server=True,
-                         sql_server_name="sajal-server",
-                         resource_group_name="sql-grp-new",
-                         set_firewall_rules=True)
+    az_sql.provide_sql_credentials(sql_db="sajaldb",
+                                   sql_server_name="sajal-server",
+                                   username="test",
+                                   password="MyPassword1@"
+                                   )
     az_sql.set_jdbc_url()
     az_sql.check_connection()

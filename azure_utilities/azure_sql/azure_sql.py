@@ -7,6 +7,7 @@ try:
     from azure.common.credentials import ServicePrincipalCredentials
     from azure.mgmt.resource import ResourceManagementClient
     from azure.mgmt.sql import SqlManagementClient
+    from azure.mgmt.sql.models import Sku
 except ImportError:
     raise ImportError("""Use -> pip install azure-common
                                 pip install azure-mgmt-sql
@@ -44,6 +45,7 @@ class AzureSQL(SendToSql):
         self.tenant_id       = os.environ.get('AZURE_TENANT_ID')
         self.default_RG      = options.get('resource_group_name') or "Test-SQL-RG"
         self.region          = options.get('region') or "westus"
+        self.sku             = options.get('sku') or Sku(name='Free')
         self.sql_client      = None
         self.resource_client = None
         self.db_object       = None
@@ -132,11 +134,13 @@ class AzureSQL(SendToSql):
 
         try:
             async_db_create = self.sql_client.databases.create_or_update(
-                self.default_RG,
-                self.sql_server_name,
-                options.get('database_name'),
+                resource_group_name = self.default_RG,
+                server_name         = self.sql_server_name,
+                database_name       = self.sql_db,
+                parameters          =
                 {
-                    'location': options.get('region') or self.region
+                    'location' : options.get('region') or self.region,
+                    'sku'      : self.sku
                 }
             )
         except Exception as err:
@@ -206,6 +210,19 @@ class AzureSQL(SendToSql):
             print(f"Firewall rule created, info -> {firewall_rule}")
             return firewall_rule
 
+    def define_sku(self, name = 'Free', tier = 'Free', size = None, family = None, capacity = None):
+        """
+        Define the sku of the DB you want to create. By default it will create free DB.
+        :param name: Required. The name of the SKU, typically, a letter + Number code, e.g. P3.
+        :param tier: The tier or edition of the particular SKU, e.g. Basic, Premium.
+        :param size: Size of the SKU
+        :param family: If the service has different generations of hardware, for the same SKU, then that can
+         be captured here.
+        :param capacity: Capacity of the SKU
+        :return:
+        """
+        self.sku = Sku(name = name, tier = tier, size = size, family = family, capacity = capacity)
+
     def get_database(self, database_name, **options):
         """
         Get Database object from Azure
@@ -233,6 +250,7 @@ class AzureSQL(SendToSql):
             username      = f"{self.username}@{self.sql_server_name}",
             password      = self.password
         ) + "hostNameInCertificate=*.database.windows.net;loginTimeout=30;"
+        print("JDBC URL: " + self.jdbc_url)
 
     def validate_sp_login(self):
         """
