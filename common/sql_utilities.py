@@ -1,5 +1,4 @@
 import jaydebeapi
-import os
 from package_utils import ROOT_DIR
 
 
@@ -45,14 +44,11 @@ def check_connection(jdbc_url, user_cred, **options):
         curs.fetchall()
         print("Dropping table...")
         curs.execute('DROP table CUSTOMER')
-        curs.close()
-        conn.close()
+        print("Connection is live and running..")
+        return conn, curs
     except Exception as err:
         print('Error connecting to DB')
         raise Exception(err.args[0])
-
-    if options.get('return_result'):
-        return conn
 
 
 def get_jar_path(version=8):

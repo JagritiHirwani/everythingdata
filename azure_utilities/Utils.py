@@ -1,7 +1,8 @@
-from azure_utilities import logger
 import names
+import os
+
+from azure_utilities import logger
 from azure_utilities.azure_sql.azure_sql import AzureSQL
-from common.sql_utilities import *
 
 
 def az_cli(args_str, return_result=True):
@@ -139,17 +140,39 @@ def create_service_principal(**options):
 
 
 if __name__ == "__main__":
-    app = {'appId': 'a9b31f0c-3c8c-440e-bffa-1852d62535d3',
-           'displayName': 'Hannah-App',
-           'name': 'http://Hannah-App',
-           'password': 'lVKjqCd._lwh93uA.STxv8zS70u2xsE4dG',
-           'tenant': 'bb7d3766-d430-4c13-8dc7-e8f0d774c1bb'}
+    app = {
+       'appId': 'a9b31f0c-3c8c-440e-bffa-1852d62535d3',
+       'displayName': 'Hannah-App',
+       'name': 'http://Hannah-App',
+       'password': 'lVKjqCd._lwh93uA.STxv8zS70u2xsE4dG',
+       'tenant': 'bb7d3766-d430-4c13-8dc7-e8f0d774c1bb'
+    }
     login(service_principal_login=True, SP_credentials=app)
     az_sql = AzureSQL()
-    az_sql.provide_sql_credentials(sql_db="sajaldb",
-                                   sql_server_name="sajal-server",
-                                   username="test",
-                                   password="MyPassword1@"
-                                   )
-    az_sql.set_jdbc_url()
+    az_sql.create_sql_db(
+        database_name="sajaldb",
+        sql_server_name="sajal-server",
+        password="Igobacca1@",
+        resource_group_name="sql-rg-tst",
+        create_new_server=True,
+        set_firewall_rules=True
+    )
     az_sql.check_connection()
+    az_sql.create_table_schema(schema_list = [
+        {
+            'col_name': 'CUST_ID',
+            'datatype': 'INTEGER'
+        },
+        {
+            'col_name': 'NAME',
+            'datatype': 'VARCHAR(50)'
+        }
+    ])
+    az_sql.create_table_using_schema(table_name="customer")
+
+    # az_sql.provide_sql_credentials(database_name="sajaldb",
+    #                                sql_server_name="sajal-server",
+    #                                username="test",
+    #                                password="MyPassword1@"
+    #                                )
+

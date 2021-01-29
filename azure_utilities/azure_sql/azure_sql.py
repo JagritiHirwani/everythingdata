@@ -8,6 +8,7 @@ try:
     from azure.mgmt.resource import ResourceManagementClient
     from azure.mgmt.sql import SqlManagementClient
     from azure.mgmt.sql.models import Sku
+    from beartype import beartype
 except ImportError:
     raise ImportError("""Use -> pip install azure-common
                                 pip install azure-mgmt-sql
@@ -23,20 +24,20 @@ class AzureSQL(SendToSql):
 
     def __init__(self,
                  sql_server_name = None,
-                 sql_db          = None,
+                 database_name   = None,
                  username        = None,
                  password        = None,
                  **options):
         """
 
         :param sql_server:
-        :param sql_db:
+        :param database_name:
         :param username:
         :param password:
         :param options:
         """
         self.sql_server_name = sql_server_name or "test-server"
-        self.sql_db          = sql_db
+        self.database_name   = database_name
         self.username        = username
         self.password        = password
         self.subscription_id = os.environ.get('AZURE_SUBSCRIPTION_ID')
@@ -50,6 +51,10 @@ class AzureSQL(SendToSql):
         self.resource_client = None
         self.db_object       = None
         self.jdbc_url        = None
+        self.conn            = None
+        self.cursor          = None
+        self._schema         = None
+        self.table           = None
 
         self.validate_sp_login()
 
@@ -63,20 +68,20 @@ class AzureSQL(SendToSql):
 
     def provide_sql_credentials(self,
                                 sql_server_name  = None,
-                                sql_db           = None,
+                                database_name    = None,
                                 username         = None,
                                 password         = None,
                                 **options):
         """
         Either provide credentials using this method, or while initializing the class
         :param sql_server_name:
-        :param sql_db:
+        :param database_name:
         :param username:
         :param password:
         :return:
         """
         self.sql_server_name = sql_server_name
-        self.sql_db          = sql_db
+        self.database_name   = database_name
         self.username        = username
         self.password        = password
 
@@ -87,17 +92,55 @@ class AzureSQL(SendToSql):
         """
         print("Checking connection....")
         assert self.jdbc_url or options.get('jdbc_url'), "JDBC URL is not set or not provided"
-        if check_connection(jdbc_url=self.jdbc_url or options.get('jdbc_url'),
-                            user_cred={'user': self.username, 'password': self.password}):
+        self.conn, self.cursor = check_connection(
+            jdbc_url  = self.jdbc_url or options.get('jdbc_url'),
+            user_cred = {'user': self.username, 'password': self.password},
+            **options)
+        if self.conn:
             print(f"Successfully Connected :D, serverName -> {self.sql_server_name}")
+        if options.get('return_result'):
+            return self.conn
 
-    def create_schema(self):
+    @beartype
+    def create_table_schema(self, schema_list: list, **options):
+        """
+        Create the schema, or assign the schema using this function. This schema will always be validated against
+        the data that you will be sending to database. This can be ignored if not needed
+        :param schema_list:
+        :param options:
+        :return:
+        """
+        self._validate_table_schema_structure(schema_list)
+
+    def validate_table_schema(self):
         pass
 
-    def validate_schema(self):
-        pass
+    @beartype
+    def create_table_using_schema(self, table_name: str, **options):
+        """
+        Create a table, using the schema. If you want to create a table without using schema, use self.cursor to Execute
+        custom query and create table. This method takes schema, dynamically creates SQL for creating a new table.
+        :param table_name: Name of the table you want to create
+        :param options:
+        :return:
+        """
+        assert self.conn and self.cursor, "Use set_connection_object() method to set 'conn' and 'cursor' object"
+        assert self._schema, "Please define a schema to use this method using create_schema() method"
+        create_table_query = f"CREATE TABLE {table_name.upper()} ("
+        for col in self._schema:
+            try:
+                print(col)
+                create_table_query += f'[{col["col_name"]}] {col["datatype"]} null, '
+            except AttributeError as err:
+                print(f"Error in data, col value -> {col}")
+                raise AttributeError(err.args[0])
+        create_table_query = create_table_query[0:-2] + ")"
+        print(f"Create table query : {create_table_query}")
+        self.cursor.execute(create_table_query)
+        print("Table created.")
 
-    def create_sql_db(self, **options):
+    @beartype
+    def create_sql_db(self, database_name: str, **options):
         """
         Create a SQL DB in azure. If server name is not given, program will throw an error, else pass optional params
         of create_new_server=True and server_name=<Server-name> or call create_new_server method.
@@ -112,8 +155,7 @@ class AzureSQL(SendToSql):
         """
         self.validate_sp_login()
         print("Creating DB...")
-        assert options.get('database_name'), "Provide database name using database_name param"
-        self.sql_db = options.get('database_name')
+        self.database_name = database_name
 
         # You MIGHT need to add SQL as a valid provider for these credentials
         # If so, this operation has to be done only once for each credential
@@ -136,7 +178,7 @@ class AzureSQL(SendToSql):
             async_db_create = self.sql_client.databases.create_or_update(
                 resource_group_name = self.default_RG,
                 server_name         = self.sql_server_name,
-                database_name       = self.sql_db,
+                database_name       = self.database_name,
                 parameters          =
                 {
                     'location' : options.get('region') or self.region,
@@ -148,6 +190,7 @@ class AzureSQL(SendToSql):
             raise Exception(err.args)
         finally:
             self.db_object = async_db_create.result()
+            self.set_jdbc_url()
             print(self.db_object)
 
     def create_sql_server_instance(self, sql_server_name = None, **options):
@@ -189,20 +232,23 @@ class AzureSQL(SendToSql):
         :return:
         """
         print("Creating Server Firewall Rule...")
-        ip = None
         try:
             assert starting_ip and ending_ip
         except AssertionError:
             import requests
             ip = requests.get('https://checkip.amazonaws.com').text.strip()
             print(f"Starting IP and ending IP is not given, using current IP of the system which is {ip}")
+            subnet = ".".join(ip.split('.')[0:2])
+            starting_ip = subnet + ".0.0"
+            ending_ip   = subnet + ".255.255"
+            print(f"Creating firewall rule with starting IP: {starting_ip} and ending IP: {ending_ip}")
         try:
             firewall_rule = self.sql_client.firewall_rules.create_or_update(
                 self.default_RG,
                 options.get('server_name') or self.sql_server_name,
-                f"firewall_rule_for_{ip}" if ip else f"firewall_from_{starting_ip}_to_{ending_ip}",
-                f"{ip}" if ip else f"{starting_ip}",
-                f"{ip}" if ip else f"{ending_ip}"
+                f"firewall_from_{starting_ip}_to_{ending_ip}",
+                f"{starting_ip}",
+                f"{ending_ip}"
             )
         except Exception as err:
             print(f"Error creating firewall rule, info -> {err.args[0]}")
@@ -236,17 +282,44 @@ class AzureSQL(SendToSql):
             database_name
         )
 
-    def commit_data(self):
-        pass
+    def set_connection_object(self):
+        """
+        Sets the connection object for your DB
+        :return:
+        """
+        assert self.jdbc_url, "JDBC URL is not set, cannot get a connection without it, use set_jdbc_url() method to" \
+                              "set / get jdbc URL."
+        self.conn   = self.check_connection(return_result=True)
+        self.cursor = self.conn.cursor()
+
+    def execute_raw_query(self, query):
+        """
+        Execute raw query on your db using the conn object
+        :param query:
+        :return:
+        """
+        assert self.conn and self.cursor, "Use set_connection_object() method to set 'conn' and 'cursor' object"
+        self.cursor.execute(query)
+
+    def commit_data(self, data_dict = None, **options):
+        """
+        Send the data to the DB that you have initialized. self._schema is necessary to be defined for this function.
+        :return:
+        """
+        assert self._schema, "Please provide a schema by using create_table_schema() method"
 
     def set_jdbc_url(self):
         """
         Create JDBC URL of your database
         :return:
         """
+        assert self.sql_server_name and self.database_name and self.username and self.password, \
+            "Please set all credentials (server name, database name, username and password) of the database " \
+            "you want to connect, then only you can get JDBC url. Use provide_sql_credentials() method"
+
         self.jdbc_url = create_jdbc_url(
             host_name     = f"{self.sql_server_name}.database.windows.net",
-            database_name = self.sql_db,
+            database_name = self.database_name,
             username      = f"{self.username}@{self.sql_server_name}",
             password      = self.password
         ) + "hostNameInCertificate=*.database.windows.net;loginTimeout=30;"
@@ -258,8 +331,22 @@ class AzureSQL(SendToSql):
         :return:
         """
         assert self.subscription_id and self.client_id and self.client_secret and self.tenant_id, \
-            f"Please login using 'login' method and passing your service principal credentials, as AzureSQL " \
+            f"Please login using 'login()' method and passing your service principal credentials, as AzureSQL " \
             f"class uses SP_credentials which are exported as environment variables, and current values of those " \
             f"variables are subscription_id -> {self.subscription_id}, tenant_id -> {self.tenant_id}," \
             f"client_id -> {self.client_id}," \
             f"client_secret -> {self.client_secret}"
+
+    @beartype
+    def _validate_table_schema_structure(self, schema: list) -> bool :
+        """
+        Validate the structure of the schema
+        :param schema:
+        :return:
+        """
+        for col_value in schema:
+            assert isinstance(col_value, dict), f"All values of schema, should be a dict, {col_value} is not"
+            assert len({'col_name', 'datatype'} - set(col_value.keys())) == 0, \
+                f"'col_name and datatype must be present, they are not in {col_value}"
+        self._schema = schema
+        return True

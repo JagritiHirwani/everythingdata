@@ -12,11 +12,11 @@ class SendToSql(metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def create_schema(self):
+    def create_table_schema(self):
         pass
 
     @abc.abstractmethod
-    def validate_schema(self):
+    def validate_table_schema(self):
         pass
 
     @abc.abstractmethod
