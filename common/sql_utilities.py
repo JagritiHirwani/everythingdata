@@ -32,7 +32,7 @@ def check_connection(jdbc_url, user_cred, **options):
         )
         curs = conn.cursor()
 
-        print("Trying to creating a temp table...")
+        print("Trying to create a temp table...")
         curs.execute('create table CUSTOMER'
                      '("CUST_ID" INTEGER not null,'
                      ' "NAME" VARCHAR(50) not null,'

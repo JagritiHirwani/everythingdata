@@ -53,8 +53,8 @@ class AzureSQL(SendToSql):
         self.jdbc_url        = None
         self.conn            = None
         self.cursor          = None
-        self._schema         = None
-        self.table           = None
+        self._schema         = options.get('schema') or []
+        self.table           = options.get('table') or 'test-table'
 
         self.validate_sp_login()
 
@@ -124,8 +124,10 @@ class AzureSQL(SendToSql):
         :param options:
         :return:
         """
+        print(f"Creating table {table_name}...")
         assert self.conn and self.cursor, "Use set_connection_object() method to set 'conn' and 'cursor' object"
         assert self._schema, "Please define a schema to use this method using create_schema() method"
+        self.table = table_name
         create_table_query = f"CREATE TABLE {table_name.upper()} ("
         for col in self._schema:
             try:
@@ -292,21 +294,59 @@ class AzureSQL(SendToSql):
         self.conn   = self.check_connection(return_result=True)
         self.cursor = self.conn.cursor()
 
-    def execute_raw_query(self, query):
+    def execute_raw_query(self, query, print_results = True):
         """
         Execute raw query on your db using the conn object
         :param query:
+        :param print_results: Turn off printing of queries
         :return:
         """
         assert self.conn and self.cursor, "Use set_connection_object() method to set 'conn' and 'cursor' object"
+        if print_results:
+            print(f"Executing query : {query}")
         self.cursor.execute(query)
 
-    def commit_data(self, data_dict = None, **options):
+    @beartype
+    def commit_data(self, data: (list, dict), **options):
         """
         Send the data to the DB that you have initialized. self._schema is necessary to be defined for this function.
+        :param data: Data can be either of the type dict, or list. If data is list, all values should be provided
+                     for the columns of the table, else it will raise SQL error.
+                     If do not want to give values for all the columns, use dict, where an element looks like
+                     [{ 'col_name' : <col-name>, 'value' : <value> }], and it will create query for only those cols
+                     or a dict can be passed {'col_name_1': 'value_1', 'col_name_2': 'value_2'....}
         :return:
         """
         assert self._schema, "Please provide a schema by using create_table_schema() method"
+        query = f"INSERT INTO {self.table} ("
+        if isinstance(data, dict):
+            for col_name in data.keys():
+                query += f"{col_name}, "
+            query = query[0:-2] + ") VALUES ("
+            for values in data.values():
+                query += f"'{values}', "
+            query = query[0:-2] + ")"
+            self.execute_raw_query(query)
+
+        elif isinstance(data[0], dict):
+            for col in data:
+                query += f"{col['col_name']}, "
+            query = query[0:-2] + ") VALUES ("
+            for col in data:
+                query += f"'{col['value']}', "
+            query = query[0:-2] + ")"
+            self.execute_raw_query(query)
+
+        else:
+            assert len(self._schema) == len(data), "All columns values are not given, as number of elements in 'data'" \
+                                                   "is not equal to number of cols defined in _schema"
+            for col in self._schema:
+                query += f"{col['col_name']}, "
+            query = query[0:-2] + ") VALUES ("
+            for _data in data:
+                query += f"'{_data}', "
+            query = query[0:-2] + ")"
+            self.execute_raw_query(query)
 
     def set_jdbc_url(self):
         """
@@ -344,9 +384,15 @@ class AzureSQL(SendToSql):
         :param schema:
         :return:
         """
+
         for col_value in schema:
             assert isinstance(col_value, dict), f"All values of schema, should be a dict, {col_value} is not"
             assert len({'col_name', 'datatype'} - set(col_value.keys())) == 0, \
                 f"'col_name and datatype must be present, they are not in {col_value}"
-        self._schema = schema
+
+            # lower case the name of the column and store it in new temp dict.
+            self._schema.append({
+                'col_name': col_value['col_name'].lower(),
+                'datatype': col_value['datatype']
+            })
         return True

@@ -153,7 +153,7 @@ if __name__ == "__main__":
         database_name="sajaldb",
         sql_server_name="sajal-server",
         password="Igobacca1@",
-        resource_group_name="sql-rg-tst",
+        resource_group_name="sql-rg-tst-",
         create_new_server=True,
         set_firewall_rules=True
     )
@@ -169,6 +169,10 @@ if __name__ == "__main__":
         }
     ])
     az_sql.create_table_using_schema(table_name="customer")
+    az_sql.commit_data(data = {
+        'cust_id': 50,
+        'name': 'sajal'
+    })
 
     # az_sql.provide_sql_credentials(database_name="sajaldb",
     #                                sql_server_name="sajal-server",
