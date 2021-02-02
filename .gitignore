@@ -6,3 +6,5 @@ azure_utilities/logs/
 
  common/__pycache__/
 .DS_Store
+
+azure_utilities/azure_sql/__pycache__
