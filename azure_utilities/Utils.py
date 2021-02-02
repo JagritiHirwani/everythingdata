@@ -2,7 +2,7 @@ import names
 import os
 
 from azure_utilities import logger
-from azure_utilities.azure_sql.azure_sql import AzureSQL
+from azure_utilities.azure_sql.sql_send_data import SQLSendData
 
 
 def az_cli(args_str, return_result=True):
@@ -125,16 +125,16 @@ def create_service_principal(**options):
     """
     logger.debug(f"Inside create_service_principal function, options -> {options}")
     print("Creating new service principal...")
-    name_of_app = options.get('name_of_app') or f"{names.get_first_name()}-App"
+    name_of_app     = options.get('name_of_app') or f"{names.get_first_name()}-Python-App"
     skip_assignment = "--skip-assignment" if options.get('skip_assignment') else ""
 
     logger.debug(f"For service principle, name of App -> {name_of_app}")
     service_app_cred = az_cli(f"ad sp create-for-rbac -n {name_of_app} {skip_assignment}")
 
     print(f"Service principal details -> {service_app_cred}")
-    os.environ['AZURE_CLIENT_ID'] = service_app_cred['appId']
+    os.environ['AZURE_CLIENT_ID']     = service_app_cred['appId']
     os.environ['AZURE_CLIENT_SECRET'] = service_app_cred['password']
-    os.environ['AZURE_TENANT_ID'] = service_app_cred['tenant']
+    os.environ['AZURE_TENANT_ID']     = service_app_cred['tenant']
     if options.get('return_result'):
         return service_app_cred
 
@@ -148,16 +148,23 @@ if __name__ == "__main__":
        'tenant': 'bb7d3766-d430-4c13-8dc7-e8f0d774c1bb'
     }
     login(service_principal_login=True, SP_credentials=app)
-    az_sql = AzureSQL()
+    az_sql = SQLSendData(
+        database_name = "sajaldb",
+        server_name   = "sajal-server",
+        db_username   = "test",
+        db_password   = "Igobacca1@",
+    )
+
+    # create a new sql database
     az_sql.create_sql_db(
-        database_name="sajaldb",
-        sql_server_name="sajal-server",
-        password="Igobacca1@",
-        resource_group_name="sql-rg-tst-",
         create_new_server=True,
         set_firewall_rules=True
     )
+
+    # check if the application is able to reach the DB
     az_sql.check_connection()
+
+    # create a table schema
     az_sql.create_table_schema(schema_list = [
         {
             'col_name': 'CUST_ID',
@@ -168,11 +175,19 @@ if __name__ == "__main__":
             'datatype': 'VARCHAR(50)'
         }
     ])
+
+    # create a table using the schema defined
     az_sql.create_table_using_schema(table_name="customer")
     az_sql.commit_data(data = {
         'cust_id': 50,
         'name': 'sajal'
     })
+
+    # connect to an already existing table
+    # az_sql.connect_to_table(
+    #     table_name="customer", server_name="sajal", db_name="sajal_db", db_username="sajal", db_password="<some-pass>"
+    # )
+    # az_sql.commit_data([50, 'sajal'])
 
     # az_sql.provide_sql_credentials(database_name="sajaldb",
     #                                sql_server_name="sajal-server",

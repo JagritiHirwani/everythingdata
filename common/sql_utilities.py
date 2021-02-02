@@ -5,6 +5,7 @@ from package_utils import ROOT_DIR
 def create_jdbc_url(host_name, username, password, database_name):
     """
     Returns JDBC URL based on the given input
+    :param database_name:
     :param host_name: Server name of the DB
     :param username: Admin / User username for the DB
     :param password: Admin / User Password for the DB
@@ -24,6 +25,7 @@ def check_connection(jdbc_url, user_cred, **options):
     assert user_cred.get('user') and user_cred.get('password'), "Please provide a username and password"
 
     try:
+        print("Trying to connect...")
         conn = jaydebeapi.connect(
             "com.microsoft.sqlserver.jdbc.SQLServerDriver",
             jdbc_url,
@@ -33,17 +35,17 @@ def check_connection(jdbc_url, user_cred, **options):
         curs = conn.cursor()
 
         print("Trying to create a temp table...")
-        curs.execute('create table CUSTOMER'
+        curs.execute('create table CUSTOMER_Test_Python'
                      '("CUST_ID" INTEGER not null,'
                      ' "NAME" VARCHAR(50) not null,'
                      ' primary key ("CUST_ID"))'
                      )
         print("Table created successfully")
-        curs.execute("insert into CUSTOMER values (?, ?)", (1, 'John'))
-        curs.execute("select * from CUSTOMER")
+        curs.execute("insert into CUSTOMER_Test_Python values (?, ?)", (1, 'John'))
+        curs.execute("select * from CUSTOMER_Test_Python")
         curs.fetchall()
         print("Dropping table...")
-        curs.execute('DROP table CUSTOMER')
+        curs.execute('DROP table CUSTOMER_Test_Python')
         print("Connection is live and running..")
         return conn, curs
     except Exception as err:
