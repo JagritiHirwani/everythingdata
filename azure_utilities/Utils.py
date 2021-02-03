@@ -1,8 +1,10 @@
 import names
 import os
-
+import time
+from datetime import datetime as dt, timezone
 from azure_utilities import logger
 from azure_utilities.azure_sql.sql_send_data import SQLSendData
+from azure_utilities.azure_sql.sql_get_data import SQLGetData
 
 
 def az_cli(args_str, return_result=True):
@@ -153,6 +155,7 @@ if __name__ == "__main__":
         server_name   = "sajal-server",
         db_username   = "test",
         db_password   = "Igobacca1@",
+        resource_group_name = 'sql'
     )
 
     # create a new sql database
@@ -183,15 +186,26 @@ if __name__ == "__main__":
         'name': 'sajal'
     })
 
-    # connect to an already existing table
-    # az_sql.connect_to_table(
-    #     table_name="customer", server_name="sajal", db_name="sajal_db", db_username="sajal", db_password="<some-pass>"
-    # )
-    # az_sql.commit_data([50, 'sajal'])
+    # get data from the table
+    get_data = SQLGetData(
+        database_name="sajaldb",
+        server_name="sajal-server",
+        db_username="test",
+        db_password="Igobacca1@",
+    )
+    get_data.connect_to_table("customer")
 
-    # az_sql.provide_sql_credentials(database_name="sajaldb",
-    #                                sql_server_name="sajal-server",
-    #                                username="test",
-    #                                password="MyPassword1@"
-    #                                )
-
+    # example how to get a streaming data
+    i = 0
+    while True:
+        i += 1
+        az_sql.commit_data(data={
+            'cust_id': i,
+            'name': f'sajal-{i}'
+        })
+        time.sleep(3)
+        df = get_data.return_differential_data(
+            initially_fetch_data_greater_than_this= dt.strftime(dt.now(timezone.utc), "%Y-%m-%d %H:%M:%S")
+        )
+        print(df)
+        time.sleep(3)

@@ -41,9 +41,9 @@ class SQLSendData(SendToSql):
         :param options:
         """
         self.sql_credentials = SQLCredentials(
-            server_name   = server_name,
-            database_name = database_name,
-            db_username   = db_username,
+            server_name   = server_name    ,
+            database_name = database_name  ,
+            db_username   = db_username    ,
             db_password   = db_password
         )
         self.create_sql_instance  = CreateSQLInstance(self.sql_credentials, **options)
@@ -70,9 +70,9 @@ class SQLSendData(SendToSql):
         :return:
         """
         self.sql_credentials = SQLCredentials(
-            server_name   = server_name,
-            database_name = database_name,
-            db_username   = db_username,
+            server_name   = server_name    ,
+            database_name = database_name  ,
+            db_username   = db_username    ,
             db_password   = db_password
         )
 

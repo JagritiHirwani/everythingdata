@@ -36,7 +36,7 @@ class Connection:
 
     def connect_to_table(self,
                          table_name: str,
-                         **options) -> list:
+                         **options):
         """
         Connect to table instance if you already have a table. This function will read the schema of your table,
         and prepare the 'schema' of your defined table, and use it to execute 'commit_data()' function.
@@ -45,8 +45,8 @@ class Connection:
         :return:
         """
         self.table_name = table_name
-        self.jdbc_url = get_jdbc_url(self.sql_credentials)
-        self.check_connection()
+        if not (self.conn and self.cursor):
+            self.check_connection()
         result = execute_raw_query(
             self.cursor,
             f"select COLUMN_NAME, DATA_TYPE from INFORMATION_SCHEMA.COLUMNS where TABLE_NAME = '{self.table_name}'",
@@ -59,6 +59,6 @@ class Connection:
                     'col_name': val[0].lower(),
                     'datatype': val[1]
                 })
-        return self.schema
+        return self.schema, self.cursor, self.conn
 
 
