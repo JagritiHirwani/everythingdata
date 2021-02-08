@@ -47,7 +47,7 @@ class SQLSendData(SendToSql):
             db_password   = db_password
         )
         self.create_sql_instance  = CreateSQLInstance(self.sql_credentials, **options)
-        self.connection      = Connection(self.sql_credentials)
+        self.connection      = Connection(self.sql_credentials, **options)
         self.conn            = None
         self.cursor          = None
         self.schema          = options.get('schema') or []

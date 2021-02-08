@@ -2,7 +2,7 @@ from abc import ABC
 from base_classes.get_data import GetFromSql
 from .connection import Connection
 from .common_utils import *
-from datetime import datetime as dt
+from datetime import datetime as dt, timezone, timedelta
 
 
 class SQLGetData(GetFromSql, ABC):
@@ -11,10 +11,10 @@ class SQLGetData(GetFromSql, ABC):
     """
 
     def __init__(self,
-                 server_name,
-                 database_name,
-                 db_username,
-                 db_password,
+                 server_name   ,
+                 database_name ,
+                 db_username   ,
+                 db_password   ,
                  **options):
         """
 
@@ -25,17 +25,18 @@ class SQLGetData(GetFromSql, ABC):
         :param options:
         """
         self.sql_credentials = SQLCredentials(
-            server_name    = server_name,
-            database_name  = database_name,
-            db_username    = db_username,
+            server_name    = server_name   ,
+            database_name  = database_name ,
+            db_username    = db_username   ,
             db_password    = db_password
         )
-        self.connection = Connection(self.sql_credentials)
+        self.connection = Connection(self.sql_credentials, **options)
         self.conn       = None
         self.cursor     = None
         self.schema     = options.get('schema') or []
         self.table_name = options.get('table_name') or "default_table_python"
         self.previous_diff_val = None
+        self.differential_column = options.get('differential_column') or "create_dttm"
 
     def check_connection(self, **options):
         """
@@ -94,7 +95,7 @@ class SQLGetData(GetFromSql, ABC):
             return df
 
     def return_differential_data(self,
-                                 differential_column = "create_dttm",
+                                 differential_column = None,
                                  initially_fetch_data_greater_than_this = None,
                                  **options):
         """
@@ -106,11 +107,14 @@ class SQLGetData(GetFromSql, ABC):
         :param options:
         :return:
         """
+        self.differential_column = differential_column if differential_column else self.differential_column
         if initially_fetch_data_greater_than_this and (self.previous_diff_val != initially_fetch_data_greater_than_this)\
                 and (not self.previous_diff_val):
             self.previous_diff_val = initially_fetch_data_greater_than_this
+        else:
+            self.previous_diff_val = dt.strftime(dt.now(timezone.utc) - timedelta(seconds=10), "%Y-%m-%d %H:%M:%S")
         data = self.execute_raw_query(f"select * from {self.table_name} where "
-                                      f"{differential_column} > '{self.previous_diff_val}'",
+                                      f"{self.differential_column} > '{self.previous_diff_val}'",
                                       return_result=True)
         if len(data) == 0:
             return []
@@ -119,5 +123,5 @@ class SQLGetData(GetFromSql, ABC):
                             "schema of your table."
         columns = [val['col_name'] for val in self.schema]
         df = pd.DataFrame(data, columns=columns)
-        self.previous_diff_val = df[differential_column].iloc[-1]
+        self.previous_diff_val = df[self.differential_column].iloc[-1]
         return df

@@ -2,6 +2,7 @@ import names
 import os
 import time
 from datetime import datetime as dt, timezone
+from common.common_classes import PlotLiveData
 from azure_utilities import logger
 from azure_utilities.azure_sql.sql_send_data import SQLSendData
 from azure_utilities.azure_sql.sql_get_data import SQLGetData
@@ -155,32 +156,35 @@ if __name__ == "__main__":
         server_name   = "sajal-server",
         db_username   = "test",
         db_password   = "Igobacca1@",
-        resource_group_name = 'sql'
+        resource_group_name = 'sql',
+        table_name = "customer"
     )
 
     # create a new sql database
-    az_sql.create_sql_db(
-        create_new_server=True,
-        set_firewall_rules=True
-    )
+    # az_sql.create_sql_db(
+    #     create_new_server=True,
+    #     set_firewall_rules=True
+    # )
 
     # check if the application is able to reach the DB
     az_sql.check_connection()
-
-    # create a table schema
-    az_sql.create_table_schema(schema_list = [
-        {
-            'col_name': 'CUST_ID',
-            'datatype': 'INTEGER'
-        },
-        {
-            'col_name': 'NAME',
-            'datatype': 'VARCHAR(50)'
-        }
-    ])
+    # #
+    # # create a table schema
+    # az_sql.create_table_schema(schema_list = [
+    #     {
+    #         'col_name': 'CUST_ID',
+    #         'datatype': 'INTEGER'
+    #     },
+    #     {
+    #         'col_name': 'NAME',
+    #         'datatype': 'VARCHAR(50)'
+    #     }
+    # ])
 
     # create a table using the schema defined
-    az_sql.create_table_using_schema(table_name="customer")
+    # az_sql.create_table_using_schema(table_name="customer")
+
+    az_sql.connect_to_table("customer")
     az_sql.commit_data(data = {
         'cust_id': 50,
         'name': 'sajal'
@@ -195,17 +199,23 @@ if __name__ == "__main__":
     )
     get_data.connect_to_table("customer")
 
+    plt = PlotLiveData(get_data.return_differential_data, az_sql)
+    plt.plot_data("cust_id")
+
     # example how to get a streaming data
-    i = 0
-    while True:
-        i += 1
-        az_sql.commit_data(data={
-            'cust_id': i,
-            'name': f'sajal-{i}'
-        })
-        time.sleep(3)
-        df = get_data.return_differential_data(
-            initially_fetch_data_greater_than_this= dt.strftime(dt.now(timezone.utc), "%Y-%m-%d %H:%M:%S")
-        )
-        print(df)
-        time.sleep(3)
+    # i = 0
+    # while True:
+    #     i += 1
+    #     az_sql.commit_data(data={
+    #         'cust_id': i,
+    #         'name': f'sajal-{i}'
+    #     })
+    #     time.sleep(3)
+    #     if i == 1:
+    #         plt = PlotLiveData(get_data.return_differential_data)
+    #         plt.plot_data("cust_id")
+        # df = get_data.return_differential_data(
+        #     initially_fetch_data_greater_than_this= dt.strftime(dt.now(timezone.utc), "%Y-%m-%d %H:%M:%S")
+        # )
+        # print(df)
+        # time.sleep(3)

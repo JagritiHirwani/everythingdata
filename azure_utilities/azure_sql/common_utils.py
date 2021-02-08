@@ -49,7 +49,7 @@ def get_jdbc_url(sql_credentials: SQLCredentials) -> str:
         database_name = sql_credentials.database_name,
         username      = f"{sql_credentials.db_username}@{sql_credentials.server_name}",
         password      = sql_credentials.db_password
-    ) + "hostNameInCertificate=*.database.windows.net;loginTimeout=30;"
+    ) + ";encrypt=true;trustServerCertificate=false;hostNameInCertificate=*.database.windows.net;loginTimeout=30;"
     print("JDBC URL: " + jdbc_url)
     return jdbc_url
 

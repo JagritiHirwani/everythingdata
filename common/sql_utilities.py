@@ -12,7 +12,7 @@ def create_jdbc_url(host_name, username, password, database_name):
     :return: String
     """
     return f"jdbc:sqlserver://{host_name}:1433;database={database_name};" \
-           f"user={username};password={password};encrypt=true;trustServerCertificate=false;"
+           f"user={username};password={password}"
 
 
 def check_connection(jdbc_url, user_cred, **options):
