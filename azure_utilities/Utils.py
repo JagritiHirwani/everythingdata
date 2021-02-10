@@ -2,7 +2,7 @@ import names
 import os
 import time
 from datetime import datetime as dt, timezone
-from common.common_classes import PlotLiveData
+from common.plot_live_data import PlotLiveData
 from azure_utilities import logger
 from azure_utilities.azure_sql.sql_send_data import SQLSendData
 from azure_utilities.azure_sql.sql_get_data import SQLGetData
@@ -142,6 +142,7 @@ def create_service_principal(**options):
         return service_app_cred
 
 
+# # SQL class Example
 if __name__ == "__main__":
     app = {
        'appId': 'a9b31f0c-3c8c-440e-bffa-1852d62535d3',
@@ -170,21 +171,21 @@ if __name__ == "__main__":
     az_sql.check_connection()
     # #
     # # create a table schema
-    # az_sql.create_table_schema(schema_list = [
-    #     {
-    #         'col_name': 'CUST_ID',
-    #         'datatype': 'INTEGER'
-    #     },
-    #     {
-    #         'col_name': 'NAME',
-    #         'datatype': 'VARCHAR(50)'
-    #     }
-    # ])
+    az_sql.create_table_schema(schema_list = [
+        {
+            'col_name': 'CUST_ID',
+            'datatype': 'INTEGER'
+        },
+        {
+            'col_name': 'NAME',
+            'datatype': 'VARCHAR(50)'
+        }
+    ])
 
     # create a table using the schema defined
     # az_sql.create_table_using_schema(table_name="customer")
 
-    az_sql.connect_to_table("customer")
+    # az_sql.connect_to_table("customer")
     az_sql.commit_data(data = {
         'cust_id': 50,
         'name': 'sajal'
@@ -199,23 +200,10 @@ if __name__ == "__main__":
     )
     get_data.connect_to_table("customer")
 
-    plt = PlotLiveData(get_data.return_differential_data, az_sql)
-    plt.plot_data("cust_id")
-
-    # example how to get a streaming data
-    # i = 0
-    # while True:
-    #     i += 1
-    #     az_sql.commit_data(data={
-    #         'cust_id': i,
-    #         'name': f'sajal-{i}'
-    #     })
-    #     time.sleep(3)
-    #     if i == 1:
-    #         plt = PlotLiveData(get_data.return_differential_data)
-    #         plt.plot_data("cust_id")
-        # df = get_data.return_differential_data(
-        #     initially_fetch_data_greater_than_this= dt.strftime(dt.now(timezone.utc), "%Y-%m-%d %H:%M:%S")
-        # )
-        # print(df)
-        # time.sleep(3)
+    # # Plot live data
+    # plt = PlotLiveData(get_data.return_differential_data, az_sql)
+    # plt.plot_data("cust_id")
+    get_data.set_alert_on_live_data(parameter_name="cust_id", threshold=5, alert_type = ['email'],
+                                    email_sender_credential={'email_id': 'python.package.alert@gmail.com',
+                                                             'password': 'Mystrongpassword1@'},
+                                    send_to = 'sirohisajal@gmail.com')

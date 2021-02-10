@@ -3,6 +3,7 @@ from base_classes.get_data import GetFromSql
 from .connection import Connection
 from .common_utils import *
 from datetime import datetime as dt, timezone, timedelta
+from common.alert import Alert
 
 
 class SQLGetData(GetFromSql, ABC):
@@ -37,6 +38,7 @@ class SQLGetData(GetFromSql, ABC):
         self.table_name = options.get('table_name') or "default_table_python"
         self.previous_diff_val = None
         self.differential_column = options.get('differential_column') or "create_dttm"
+        self.executed_at = dt.utcnow() + timedelta(minutes=-3)
 
     def check_connection(self, **options):
         """
@@ -112,7 +114,7 @@ class SQLGetData(GetFromSql, ABC):
                 and (not self.previous_diff_val):
             self.previous_diff_val = initially_fetch_data_greater_than_this
         else:
-            self.previous_diff_val = dt.strftime(dt.now(timezone.utc) - timedelta(seconds=10), "%Y-%m-%d %H:%M:%S")
+            self.previous_diff_val = dt.strftime(dt.now(timezone.utc) - timedelta(minutes=1), "%Y-%m-%d %H:%M:%S")
         data = self.execute_raw_query(f"select * from {self.table_name} where "
                                       f"{self.differential_column} > '{self.previous_diff_val}'",
                                       return_result=True)
@@ -125,3 +127,27 @@ class SQLGetData(GetFromSql, ABC):
         df = pd.DataFrame(data, columns=columns)
         self.previous_diff_val = df[self.differential_column].iloc[-1]
         return df
+
+    @beartype
+    def set_alert_on_live_data(self, parameter_name : str, threshold: int, alert_type : list, **options):
+        """
+        Set alert on data by giving parameter name and threshold
+        :return:
+        """
+        import time
+        import pandas as pd
+        alert = Alert(
+            parameter_name = parameter_name, threshold = threshold,
+        )
+        fetch_data_interval_seconds = options.get('fetch_data_interval_seconds') or 30
+        email_alert = True if 'email' in [val.lower() for val in alert_type] else False
+        while True:
+            if dt.utcnow() > self.executed_at + timedelta(seconds = fetch_data_interval_seconds):
+                data = self.return_differential_data(**options)
+                if isinstance(data, pd.DataFrame) and (data[parameter_name] > threshold).any():
+                    if email_alert:
+                        alert.email_alert(data = data.to_html(), **options)
+                self.executed_at = dt.utcnow()
+            print(f"Sleeping for {fetch_data_interval_seconds} seconds before checking again...")
+            time.sleep(fetch_data_interval_seconds)
+            print("hello, alive again")

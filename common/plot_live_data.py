@@ -4,16 +4,14 @@ class PlotLiveData:
     """
     def __init__(self,
                  streaming_data_function,
-                 az_sql,
                  streaming_data_from = "sql",
                  ):
 
         self.streaming_data_function = streaming_data_function
         self.streaming_data_from     = streaming_data_from
         self.all_data = None
-        self.az_sql = az_sql
 
-    def plot_data(self, column_to_plot, interval = 30, **options):
+    def plot_data(self, column_to_plot, interval = 3000, **options):
         """
         Calls the streaming_data_function and plots the live data
         :param column_to_plot: name of column that you want to plot
@@ -41,7 +39,7 @@ class PlotLiveData:
                 plt.ylabel(column_to_plot)
                 plt.plot(x_data, y_data)
 
-        ani = FuncAnimation(plt.gcf(), update, interval=3000)
+        ani = FuncAnimation(plt.gcf(), update, interval = interval)
         plt.tight_layout()
 
         plt.show()
