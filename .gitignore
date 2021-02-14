@@ -8,3 +8,7 @@ azure_utilities/logs/
 .DS_Store
 
 azure_utilities/azure_sql/__pycache__
+
+*/logs/*
+*/logs
+azure_utilities/azure_file_storage/blob/logs/

@@ -1,9 +1,12 @@
 import os
+import beartype
 from azure.common.credentials import ServicePrincipalCredentials
+from azure_utilities.identity import Identity
 from azure.mgmt.resource import ResourceManagementClient
 from azure.mgmt.sql import SqlManagementClient
 from .common_utils import *
 from azure.mgmt.sql.models import Sku
+from azure_utilities.identity import Identity
 
 
 class CreateSQLInstance:
@@ -11,27 +14,19 @@ class CreateSQLInstance:
     A class to create SQL instance in Azure. Currently supports only 'Azure SQL', not 'SQL virtual Machine' and
     'Managed Instance'
     """
+    @beartype
     def __init__(self,
-                 sql_credentials,
+                 sql_credentials : SQLCredentials ,
+                 identity : Identity              ,
                  **options):
-        assert isinstance(sql_credentials, SQLCredentials)
         self.sql_credentials = sql_credentials
-        self.subscription_id = os.environ.get('AZURE_SUBSCRIPTION_ID')
-        self.client_id       = os.environ.get('AZURE_CLIENT_ID')
-        self.client_secret   = os.environ.get('AZURE_CLIENT_SECRET')
-        self.tenant_id       = os.environ.get('AZURE_TENANT_ID')
         self.default_RG      = options.get('resource_group_name') or "default_rg_python"
         self.region          = options.get('region') or "westus"
         self.sku             = options.get('sku') or Sku(name='Free')
         self.db_object       = None
-        
-        credentials = ServicePrincipalCredentials(
-            client_id   = self.client_id,
-            secret      = self.client_secret,
-            tenant      = self.tenant_id
-        )
-        self.resource_client = ResourceManagementClient(credentials, self.subscription_id)
-        self.sql_client      = SqlManagementClient(credentials, self.subscription_id)
+
+        self.resource_client = identity.resource_client
+        self.sql_client      = SqlManagementClient(identity.credentials, identity.subscription_id)
 
     def create_sql_server_instance(self, **options):
         """

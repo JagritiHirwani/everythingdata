@@ -60,5 +60,3 @@ class Connection:
                     'datatype': val[1]
                 })
         return self.schema, self.cursor, self.conn
-
-

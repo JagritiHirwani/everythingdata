@@ -31,14 +31,14 @@ class SQLGetData(GetFromSql, ABC):
             db_username    = db_username   ,
             db_password    = db_password
         )
-        self.connection = Connection(self.sql_credentials, **options)
-        self.conn       = None
-        self.cursor     = None
-        self.schema     = options.get('schema') or []
-        self.table_name = options.get('table_name') or "default_table_python"
-        self.previous_diff_val = None
+        self.connection          = Connection(self.sql_credentials, **options)
+        self.schema              = options.get('schema') or []
+        self.table_name          = options.get('table_name') or "default_table_python"
         self.differential_column = options.get('differential_column') or "create_dttm"
-        self.executed_at = dt.utcnow() + timedelta(minutes=-3)
+        self.executed_at         = dt.utcnow() + timedelta(minutes=-3)
+        self.conn                = None
+        self.cursor              = None
+        self.previous_diff_val   = None
 
     def check_connection(self, **options):
         """

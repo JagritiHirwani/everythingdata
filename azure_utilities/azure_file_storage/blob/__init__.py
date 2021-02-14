@@ -7,4 +7,4 @@ if __name__ == '__main__':
                           "/ub3uv1Pwaag8l3CNmh++GnHf4tGU9yy7EiSxbSkw73g3HzJluAyKKvorMpwJlHFlw==;EndpointSuffix=core"
                           ".windows.net"
     )
-    blob.create_container_if_does_not_exist(container_name="newblob")
+    blob.check_connection()

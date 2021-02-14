@@ -33,11 +33,20 @@ class BlobSendData(SendToFileStorage, ABC):
                               self.blob_service_client.list_containers(name_starts_with=self.container_name)]
         if self.container_name not in list_of_containers:
             self.blob_service_client.create_container(name = self.container_name,
-                                                      public_access = options.get('public_access') or 'blob')
+                                                      public_access = options.get('public_access') or 'container')
             self.container_client = self.blob_service_client.get_container_client(container = self.container_name)
 
     def check_connection(self):
-        pass
+        """
+        Check connection string is right, and the application is able to connect to the storage account
+        :return:
+        """
+        try:
+            itr = self.blob_service_client.list_containers()
+            print("Able to connect to the blob container, here are all the containers")
+            [print(container) for container in itr]
+        except Exception as e:
+            print(f"Unable to connect, error -> {e.args}")
 
     def create_storage_account(self):
         pass

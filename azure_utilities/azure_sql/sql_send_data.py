@@ -3,6 +3,7 @@ from base_classes.send_data import SendToSql
 from .create_sql_instance import CreateSQLInstance
 from .connection import Connection
 from .common_utils import *
+from azure_utilities.identity import Identity
 
 try:
     from azure.common.client_factory import get_client_from_cli_profile
@@ -31,6 +32,7 @@ class SQLSendData(SendToSql):
                  database_name ,
                  db_username   ,
                  db_password   ,
+                 identity      ,
                  **options):
         """
 
@@ -40,18 +42,20 @@ class SQLSendData(SendToSql):
         :param db_password: password of the user of the database
         :param options:
         """
+        assert isinstance(identity, Identity), "Use azure_utilities.identity to identity object, then use the login()" \
+                                               " methods to login into azure."
         self.sql_credentials = SQLCredentials(
             server_name   = server_name    ,
             database_name = database_name  ,
             db_username   = db_username    ,
             db_password   = db_password
         )
-        self.create_sql_instance  = CreateSQLInstance(self.sql_credentials, **options)
-        self.connection      = Connection(self.sql_credentials, **options)
-        self.conn            = None
-        self.cursor          = None
-        self.schema          = options.get('schema') or []
-        self.table_name      = options.get('table_name') or 'default_table_python'
+        self.create_sql_instance  = CreateSQLInstance(self.sql_credentials, identity, **options)
+        self.connection           = Connection(self.sql_credentials, **options)
+        self.conn                 = None
+        self.cursor               = None
+        self.schema               = options.get('schema') or []
+        self.table_name           = options.get('table_name') or 'default_table_python'
         
         validate_sp_login()
 
@@ -149,7 +153,7 @@ class SQLSendData(SendToSql):
 
     @beartype
     def connect_to_table(self,
-                         table_name  : str,
+                         table_name : str,
                          **options):
         """
         Connect to table instance if you already have a table. This function will read the schema of your table,

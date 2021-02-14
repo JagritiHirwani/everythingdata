@@ -3,6 +3,7 @@ import os
 import time
 from datetime import datetime as dt, timezone
 from common.plot_live_data import PlotLiveData
+from package_utils import ROOT_DIR
 from azure_utilities import logger
 from azure_utilities.azure_sql.sql_send_data import SQLSendData
 from azure_utilities.azure_sql.sql_get_data import SQLGetData
@@ -21,7 +22,6 @@ def az_cli(args_str, return_result=True):
         logger.error("Use pip install az.cli")
         print("Use pip install az.cli")
         raise ImportError("az.cli not present, install it first.")
-
     exit_code, result_dict, logs = az(args_str)
 
     # On 0 (SUCCESS) print result_dict, otherwise get info from `logs`
@@ -35,123 +35,114 @@ def az_cli(args_str, return_result=True):
         print(logs)
 
 
-def login(azure_username=None,
-          azure_password=None,
-          portal_login=True,
-          service_principal_login=False,
-          **options
-          ):
+def clean_up_all_resources_by_azure_functions(email_id          = "None",
+                                              password_of_email = "None",
+                                              rg_name           = "sql",
+                                              run_at_cron_exp   = "0 30 19 * * *",
+                                              name_of_trigger   = "mytimer",
+                                              **options):
     """
-    Logs you into your default tenant / subscription in azure either through web portal, or using azure CLI
-    or using service principal credentials for an app, or for system where web portal authentication is not possible
-    :param portal_login: If set to true, you will be prompted for credentials in a web browser to login into azure
-    :param azure_username: If logging in using azure cli, username is required
-    :param azure_password: If logging in using azure cli, password is required
-    :param service_principal_login: If set to true, application will login using the credentials provided as a form of
-                                    dict. Dict should contain App name, service_principal_password and tenant id.
-                                    SP_credentials => {
-                                    'appId': 'a8cbd321-1149-49f5-9154-62ef149207b0',
-                                    'displayName': 'Christian-App',
-                          [REQUIRED]'name': 'http://Christian-App',
-                          [REQUIRED]'password': 'gczWye_2aHRiOII.4iST20eECXi_0Xrpwu',
-                          [REQUIRED]'tenant': 'bb7d3766-d430-4c13-8dc7-e8f0d774c1bb'
-                                    } # Do not try to login through this, I have deleted this App :p
+    If you are forgetful like me, use this function to deploy an azure function which will delete all the azure
+    resources of the specified resource group. This will run daily at a certain time, default = 7:30 PM Daily UTC +00:00
+    and will delete all the resources under a resource group if you forget to do so at the end of day.
+    :param rg_name: Name of the resource group to clean up
+    :param password_of_email:
+    :param name_of_trigger: Name of the trigger. [optional]
+    :param run_at_cron_exp: 6 figures cron tab expression for the function to run [optional]
+    :param email_id: If you want to receive an email, it will use your credentials to send an email to itself.
+    It uses MIMEMultipart and SMTP connection, hence requires both email and password.
     :return:
     """
-    logger.debug("Inside login function")
-    if portal_login and not service_principal_login:
-        az_cli("login")
-    elif service_principal_login:
-        logger.debug(f"Logging using service principal credentials")
+    import random
+    init_function_location = f"{ROOT_DIR}/azure_utilities/azure_functions_python" \
+                             f"/resource_group_clean_up/template_init.py"
+    function_json_location = f"{ROOT_DIR}/azure_utilities/azure_functions_python/resource_group_clean_up/function.json"
 
-        # Check if SP_credentials is mentioned or not in options
-        assert options.get('SP_credentials') or options.get('create_new_sp_cred'), \
-            "Please provide service principal credentials, through SP_credentials " \
-            "and passing a dict, which contains 'name', 'password' and 'tenant' or pass create_new_sp_cred which " \
-            "will create a new SP_cred"
+    file_content = open(init_function_location, "r").read()
 
-        # Create new SP if not given by user
-        SP_credentials = create_service_principal(return_result=True, **options) if \
-            options.get('create_new_sp_cred') else options['SP_credentials']
+    modified_file_content = file_content\
+        .replace("$email_id", email_id)\
+        .replace("$password", password_of_email)\
+        .replace("$rg_name", rg_name)\
+        .replace("$AZURE_SUBSCRIPTION_ID", os.environ.get('AZURE_SUBSCRIPTION_ID')) \
+        .replace("$AZURE_CLIENT_ID", os.environ.get('AZURE_CLIENT_ID')) \
+        .replace("$AZURE_CLIENT_SECRET", os.environ.get('AZURE_CLIENT_SECRET')) \
+        .replace("$AZURE_TENANT_ID", os.environ.get('AZURE_TENANT_ID'))
+    with open(init_function_location.replace("template_init", "__init__"), "w") as init_file:
+        init_file.write(modified_file_content)
 
-        # assert the structure of SP_credentials is same as expected.
-        try:
-            assert len({'name', 'password', 'tenant'} - set(SP_credentials.keys())) == 0, \
-                "Provide SP_credentials in like {'name':'http://app-name', 'password': 'XX', 'tenant': 'tenant-id'}"
-        except AttributeError as err:
-            raise Exception(f"SP_credentials not created, or not provided, error: {err}")
+    function_file_content = open(function_json_location, "r").read()
+    modified_function_file_content = function_file_content\
+        .replace("$name", name_of_trigger).replace("$schedule", run_at_cron_exp)
+    with open(function_json_location, "w") as json_file:
+        json_file.write(modified_function_file_content)
 
-        # assert name of the app is in form "http://<app-name>"
-        assert SP_credentials['name'].find("http://") != -1, "Give name of app in format 'http://<app-name>'"
+    resource_group_name  = options.get('resource_group_name') or "clean-up-resources-rg"
+    region               = options.get('region') or "westeurope"
+    storage_account_name = options.get('storage_account_name') or f"cleanupapp{random.randint(100, 999)}"
+    function_app_name    = options.get('function_app_name') or f"cleanupapp{random.randint(100, 999)}"
 
-        result = az_cli(f"login --service-principal -u {SP_credentials['name']} -p {SP_credentials['password']}"
-                        f" --tenant {SP_credentials['tenant']}")
+    # # Create a resource group
+    az_cli(f"group create --name {resource_group_name} --location {region}")
 
-        # Set environment variables to for authorization and authentication
-        os.environ['AZURE_CLIENT_ID'] = SP_credentials['appId']
-        os.environ['AZURE_CLIENT_SECRET'] = SP_credentials['password']
-        os.environ['AZURE_TENANT_ID'] = SP_credentials['tenant']
-        os.environ['AZURE_SUBSCRIPTION_ID'] = result[0]['id']
-        os.environ['logged_in'] = 'True'
+    # # Create an Azure storage account in the resource group.
+    az_cli(f"storage account create --name {storage_account_name} --location "
+           f"{region} --resource-group {resource_group_name} --sku Standard_LRS")
 
-    else:
-        assert azure_password and azure_username, "Please provide azure_password and azure_username if you " \
-                                                  "are not going to login through portal and set portal_login = False"
-        az_cli(f"login -u {azure_username} -p {azure_password}")
+    # # Create a serverless function app in the resource group.
+    az_cli(f"functionapp create --name {function_app_name} --storage-account {storage_account_name}"
+           f" --consumption-plan-location {region} --resource-group {resource_group_name} --functions-version 3"
+           f" --runtime python --runtime-version 3.8"
+           f" --os-type linux")
+
+    os.system(f"cd {ROOT_DIR}/azure_utilities/azure_functions_python && "
+              f"func azure functionapp publish {function_app_name} --force ")
+    print(f"If the deployment fails, please execute this in your terminal -> "
+          f"cd {ROOT_DIR}/azure_utilities/azure_functions_python && "
+          f"func azure functionapp publish {function_app_name} --force ")
 
 
-def create_service_principal(**options):
+def clean_up_resources(resource_group_name):
     """
-    Call this function, after successfully logging in through "az login" in CLI.
-    Currently, username and password logging can not be done, as it is not a safe way to login in your account and
-    hence, microsoft has expired it unless you remove MFA from your azure account, and also it can not be done for
-    MSA accounts, only for student and work accounts.
-
-    So to login using credentials, you can create a service principle, and assign this service principal neccessary
-    access to the resource, by going to "access policies" or "IAM" section of the resource.
-    Refer for more information about service principals :
-     https://docs.microsoft.com/en-us/azure/active-directory/develop/howto-create-service-principal-portal
-
-    This function will create a service principal using azure cli commands and return and store the credentials returned
-    in a json file for future reference to enable users to login using credentials of defined service principal
-    only using the "login" function
-
-    Note: To create a new service principal, ensure you are logged in with your global administrator account or the
-    account you used while creating the azure account, using "az login".
-
-    :return: Service principal object
-    :optional params:
-                      name_of_app       : Name of the service principal which will be registered
-                      skip_assignment   : If not given, service principal will be given contributor
-                                          access to the subscription, if set to true, no role will be assigned to SP.
-                      return_result     : If set to true, result will be returned
+    Delete the resources associated with the resource group
+    :param resource_group_name:
+    :return:
     """
-    logger.debug(f"Inside create_service_principal function, options -> {options}")
-    print("Creating new service principal...")
-    name_of_app     = options.get('name_of_app') or f"{names.get_first_name()}-Python-App"
-    skip_assignment = "--skip-assignment" if options.get('skip_assignment') else ""
-
-    logger.debug(f"For service principle, name of App -> {name_of_app}")
-    service_app_cred = az_cli(f"ad sp create-for-rbac -n {name_of_app} {skip_assignment}")
-
-    print(f"Service principal details -> {service_app_cred}")
-    os.environ['AZURE_CLIENT_ID']     = service_app_cred['appId']
-    os.environ['AZURE_CLIENT_SECRET'] = service_app_cred['password']
-    os.environ['AZURE_TENANT_ID']     = service_app_cred['tenant']
-    if options.get('return_result'):
-        return service_app_cred
+    from azure.common.credentials import ServicePrincipalCredentials
+    from azure.mgmt.resource import ResourceManagementClient
+    subscription_id = os.environ.get('AZURE_SUBSCRIPTION_ID')
+    client_id       = os.environ.get('AZURE_CLIENT_ID')
+    client_secret   = os.environ.get('AZURE_CLIENT_SECRET')
+    tenant_id       = os.environ.get('AZURE_TENANT_ID')
+    credentials = ServicePrincipalCredentials(
+        client_id = client_id,
+        secret    = client_secret,
+        tenant    = tenant_id
+    )
+    resource_client = ResourceManagementClient(credentials, subscription_id)
+    try:
+        for rg in resource_client.resource_groups.list():
+            if rg.name == resource_group_name:
+                print("Following resource will be deleted")
+                for item in resource_client.resources.list_by_resource_group(rg.name):
+                    print("Item Name: %s, Item Type: %s, Item Location : %s, RG Name : %s,"
+                          % (item.name, item.type, item.location, resource_group_name))
+                resource_client.resource_groups.delete(resource_group_name)
+    except Exception as err:
+        print(err.args)
 
 
 # # SQL class Example
 if __name__ == "__main__":
     app = {
-       'appId': 'a9b31f0c-3c8c-440e-bffa-1852d62535d3',
-       'displayName': 'Hannah-App',
-       'name': 'http://Hannah-App',
-       'password': 'lVKjqCd._lwh93uA.STxv8zS70u2xsE4dG',
-       'tenant': 'bb7d3766-d430-4c13-8dc7-e8f0d774c1bb'
+       'appId'       : 'a9b31f0c-3c8c-440e-bffa-1852d62535d3',
+       'displayName' : 'Hannah-App',
+       'name'        : 'http://Hannah-App',
+       'password'    : 'lVKjqCd._lwh93uA.STxv8zS70u2xsE4dG',
+       'tenant'      : 'bb7d3766-d430-4c13-8dc7-e8f0d774c1bb'
     }
     login(service_principal_login=True, SP_credentials=app)
+
     az_sql = SQLSendData(
         database_name = "sajaldb",
         server_name   = "sajal-server",
@@ -170,7 +161,7 @@ if __name__ == "__main__":
     # check if the application is able to reach the DB
     az_sql.check_connection()
     # #
-    # # create a table schema
+    # create a table schema
     az_sql.create_table_schema(schema_list = [
         {
             'col_name': 'CUST_ID',
@@ -203,7 +194,13 @@ if __name__ == "__main__":
     # # Plot live data
     # plt = PlotLiveData(get_data.return_differential_data, az_sql)
     # plt.plot_data("cust_id")
-    get_data.set_alert_on_live_data(parameter_name="cust_id", threshold=5, alert_type = ['email'],
-                                    email_sender_credential={'email_id': 'python.package.alert@gmail.com',
-                                                             'password': 'Mystrongpassword1@'},
+    get_data.set_alert_on_live_data(parameter_name = "cust_id", threshold = 5, alert_type = ['email'],
+                                    email_sender_credential =
+                                    {
+                                        'email_id': 'python.package.alert@gmail.com',
+                                        'password': 'Mystrongpassword1@'
+                                    },
                                     send_to = 'sirohisajal@gmail.com')
+
+    clean_up_all_resources_by_azure_functions(email_id = "python.package.alert@gmail.com",
+                                              password_of_email="Mystrongpassword1@")
