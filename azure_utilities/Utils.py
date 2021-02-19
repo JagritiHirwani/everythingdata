@@ -1,10 +1,9 @@
-import names
+
 import os
-import time
-from datetime import datetime as dt, timezone
-from common.plot_live_data import PlotLiveData
+
 from package_utils import ROOT_DIR
 from azure_utilities import logger
+from azure_utilities.identity import Identity
 from azure_utilities.azure_sql.sql_send_data import SQLSendData
 from azure_utilities.azure_sql.sql_get_data import SQLGetData
 
@@ -141,7 +140,8 @@ if __name__ == "__main__":
        'password'    : 'lVKjqCd._lwh93uA.STxv8zS70u2xsE4dG',
        'tenant'      : 'bb7d3766-d430-4c13-8dc7-e8f0d774c1bb'
     }
-    login(service_principal_login=True, SP_credentials=app)
+    identity = Identity()
+    identity.login(service_principal_login=True, SP_credentials=app)
 
     az_sql = SQLSendData(
         database_name = "sajaldb",
@@ -149,7 +149,8 @@ if __name__ == "__main__":
         db_username   = "test",
         db_password   = "Igobacca1@",
         resource_group_name = 'sql',
-        table_name = "customer"
+        table_name    = "customer",
+        identity      = identity
     )
 
     # create a new sql database

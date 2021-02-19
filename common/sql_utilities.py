@@ -2,7 +2,7 @@ import jaydebeapi
 from package_utils import ROOT_DIR
 
 
-def create_jdbc_url(host_name, username, password, database_name):
+def create_jdbc_url(host_name, database_name, username = None, password = None ):
     """
     Returns JDBC URL based on the given input
     :param database_name:
@@ -11,8 +11,11 @@ def create_jdbc_url(host_name, username, password, database_name):
     :param password: Admin / User Password for the DB
     :return: String
     """
-    return f"jdbc:sqlserver://{host_name}:1433;database={database_name};" \
-           f"user={username};password={password}"
+
+    url = f"jdbc:sqlserver://{host_name}:1433;database={database_name}"
+    if username and password:
+        url += f";user={username};password={password}"
+    return url
 
 
 def check_connection(jdbc_url, user_cred, **options):
@@ -34,18 +37,19 @@ def check_connection(jdbc_url, user_cred, **options):
         )
         curs = conn.cursor()
 
-        print("Trying to create a temp table...")
-        curs.execute('create table CUSTOMER_Test_Python'
-                     '("CUST_ID" INTEGER not null,'
-                     ' "NAME" VARCHAR(50) not null,'
-                     ' primary key ("CUST_ID"))'
-                     )
-        print("Table created successfully")
-        curs.execute("insert into CUSTOMER_Test_Python values (?, ?)", (1, 'John'))
-        curs.execute("select * from CUSTOMER_Test_Python")
-        curs.fetchall()
-        print("Dropping table...")
-        curs.execute('DROP table CUSTOMER_Test_Python')
+        if not options.get('skip_table_creation'):
+            print("Trying to create a temp table...")
+            curs.execute('create table CUSTOMER_Test_Python'
+                         '("CUST_ID" INTEGER not null,'
+                         ' "NAME" VARCHAR(50) not null,'
+                         ' primary key ("CUST_ID"))'
+                         )
+            print("Table created successfully")
+            curs.execute("insert into CUSTOMER_Test_Python values (?, ?)", (1, 'John'))
+            curs.execute("select * from CUSTOMER_Test_Python")
+            curs.fetchall()
+            print("Dropping table...")
+            curs.execute('DROP table CUSTOMER_Test_Python')
         print("Connection is live and running..")
         return conn, curs
     except Exception as err:
@@ -64,4 +68,18 @@ def get_jar_path(version=8):
 
 
 if __name__ == "__main__":
-    print(get_jar_path())
+    from pprint import pprint
+    sql_conn, sql_curs = check_connection(
+        "jdbc:sqlserver://dbsed4527.ms.ds.uhc.com:1433;database=MBM_DEV_DB",
+        user_cred={'user' : "mbmdevdb", 'password': 'M(W;X}ekp6W@J_'},
+        skip_table_creation=True
+    )
+
+    sql_curs.execute("select top 6 * from mbm.OC_MTHLY_RPT")
+    data = set(sql_curs.fetchall())
+
+    sql_curs.execute("select top 5 * from mbm.OC_MTHLY_RPT")
+    data1 = set(sql_curs.fetchall())
+    data_diff = data - data1
+    pprint(data_diff)
+    pprint(data1-data)

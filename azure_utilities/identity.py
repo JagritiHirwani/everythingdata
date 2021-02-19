@@ -1,8 +1,7 @@
 import names
 import os
-from package_utils import ROOT_DIR
+
 from azure_utilities import logger
-from azure_utilities.Utils import az_cli
 from azure.common.credentials import ServicePrincipalCredentials
 from azure.mgmt.resource import ResourceManagementClient
 
@@ -13,6 +12,21 @@ class Identity:
         self.resource_client = None
         self.credentials     = None
         self.subscription_id = None
+
+    def az_cli_(self, args_str, return_result=True):
+        """
+        Execute azure ali commands
+        :param args_str: command to execute. For eg "login"
+        :param return_result: Returns the result_dict
+        :return:
+        """
+        try:
+            from az.cli import az
+        except ImportError:
+            logger.error("Use pip install az.cli")
+            print("Use pip install az.cli")
+            raise ImportError("az.cli not present, install it first.")
+        exit_code, result_dict, logs = az(args_str)
 
     def login(self,
               azure_username=None,

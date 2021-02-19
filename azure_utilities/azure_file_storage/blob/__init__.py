@@ -8,3 +8,5 @@ if __name__ == '__main__':
                           ".windows.net"
     )
     blob.check_connection()
+    blob.create_container_if_does_not_exist()
+    blob.upload_data(upload_file_path="/Users/ssirohi3/Desktop/Hello.txt")
