@@ -21,7 +21,7 @@ class BlobSendData(SendToFileStorage):
                  **options):
 
         self.connection_string    = connection_string
-        self.container_name       = container_name or "default-Container-Python"
+        self.container_name       = container_name or "defaultcontainerpython"
         self.blob_service_client  = BlobServiceClient.from_connection_string(self.connection_string) \
             if connection_string else None
         self.container_client     = ContainerClient.from_connection_string(self.connection_string, self.container_name)\
@@ -35,7 +35,7 @@ class BlobSendData(SendToFileStorage):
         :return:
         """
         self.container_name = container_name if container_name else self.container_name
-        list_of_containers = [itr for itr in
+        list_of_containers = [itr.name for itr in
                               self.blob_service_client.list_containers(name_starts_with=self.container_name)]
         if self.container_name not in list_of_containers:
             self.blob_service_client.create_container(name = self.container_name,
@@ -127,9 +127,9 @@ class BlobSendData(SendToFileStorage):
         """
         if not file_name:
             try:
-                file_name = upload_file_path.split('/')[-1].split('.')[0]
+                file_name = upload_file_path.split('/')[-1]
             except:
-                file_name = uuid.uuid4()
+                file_name = str(uuid.uuid4())
         # Create a blob client using the local file name as the name for the blob
         blob_client = self.blob_service_client.get_blob_client(container=self.container_name, blob=file_name)
 

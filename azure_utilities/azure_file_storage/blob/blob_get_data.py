@@ -13,7 +13,7 @@ class BlobGetData(GetFromFileStorage, ABC):
     def __init__(self,
                  connection_string,
                  **options):
-        self.container_name       = options.get('container_name', "default_container_python")
+        self.container_name       = options.get('container_name', "defaultcontainerpython")
         self.connection_string    = connection_string
         self.blob_service_client  = BlobServiceClient.from_connection_string(connection_string)
         self.container_client     = ContainerClient.from_connection_string(connection_string, self.container_name)
@@ -34,7 +34,10 @@ class BlobGetData(GetFromFileStorage, ABC):
             return pool.map(self._save_blob_locally, blobs)
 
     def _save_blob_locally(self, blob):
-        file_name = blob.name
+        try:
+            file_name = blob.name
+        except AttributeError:
+            file_name = blob
         print(file_name)
         bytes_ = self.container_client.get_blob_client(file_name).download_blob().readall()
 
@@ -66,4 +69,4 @@ class BlobGetData(GetFromFileStorage, ABC):
         :return:
         """
         self.local_dir_path = local_dir_path
-        self._save_blob_locally(blob = {'name': blob_name})
+        self._save_blob_locally(blob_name)

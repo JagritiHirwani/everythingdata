@@ -5,7 +5,6 @@ import azure.functions as func
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from azure.mgmt.resource import ResourceManagementClient
-from azure.common.credentials import ServicePrincipalCredentials
 from azure.identity import ClientSecretCredential
 import smtplib
 
@@ -43,9 +42,9 @@ def main(mytimer: func.TimerRequest) -> None:
                 delete_async.wait()
 
         logging.info('Python timer trigger function ran at %s', utc_timestamp)
-        server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
+        server    = smtplib.SMTP_SSL('smtp.gmail.com', 465)
         send_from = "$email_id"
-        password = "$password"
+        password  = "$password"
 
         if send_from != "None":
             subject = "Deleted all the resources for resource group $rg_name"
@@ -55,9 +54,9 @@ def main(mytimer: func.TimerRequest) -> None:
                    f"<ul>{' '.join([f'<li>{item}' for item in items_name])}</ul>" \
                    f"cause you forgot to. :D"
 
-            msg = MIMEMultipart()
-            msg['From'] = send_from
-            msg['To'] = send_from
+            msg            = MIMEMultipart()
+            msg['From']    = send_from
+            msg['To']      = send_from
             msg['Subject'] = subject
             msg.attach(MIMEText(body, 'html'))
 

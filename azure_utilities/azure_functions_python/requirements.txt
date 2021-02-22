@@ -3,6 +3,5 @@
 azure-functions
 azure-identity
 azure-mgmt-resource
-azure-common
 email-to
 msrestazure
