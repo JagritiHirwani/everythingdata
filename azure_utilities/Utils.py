@@ -187,6 +187,12 @@ if __name__ == "__main__":
     az_sql.commit_batch_data(data = [{
         'cust_id': 90, 'name': 'jagriti'
     }])
+    import pandas as pd
+    df = pd.DataFrame({
+        'cust_id': [100], 'name': ['devesh']
+    })
+    print(df)
+    az_sql.commit_batch_data(data = df)
 
     # get data from the table
     get_data = SQLGetData(
@@ -210,5 +216,6 @@ if __name__ == "__main__":
     #                                 },
     #                                 send_to = 'sirohisajal@gmail.com')
 
-    clean_up_all_resources_by_azure_functions(email_id = "python.package.alert@gmail.com",
-                                              password_of_email="Mystrongpassword1@")
+    # clean_up_all_resources_by_azure_functions(email_id = "python.package.alert@gmail.com",
+    #                                           password_of_email="Mystrongpassword1@")
+    clean_up_resources("sql")
