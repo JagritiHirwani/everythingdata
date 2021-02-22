@@ -92,6 +92,6 @@ def validate_table_schema_structure(schema: list) -> list :
         })
     temp_schema.append({
         'col_name': 'create_dttm',
-        'datatype': 'datetime default CONVERT(varchar,current_timestamp,20) not '
+        'datatype': 'datetime default CONVERT(varchar,current_timestamp,20) not ',
     })
     return temp_schema

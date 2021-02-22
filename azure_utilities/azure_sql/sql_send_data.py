@@ -8,16 +8,13 @@ from azure_utilities.identity import Identity
 try:
     from azure.common.client_factory import get_client_from_cli_profile
     from azure.common.credentials import ServicePrincipalCredentials
+    import pandas as pd
     from azure.mgmt.resource import ResourceManagementClient
     from azure.mgmt.sql import SqlManagementClient
     from azure.mgmt.sql.models import Sku
     from beartype import beartype
-except ImportError:
-    raise ImportError("""Use -> pip install azure-common
-                                pip install azure-mgmt-sql
-                                pip install azure-mgmt-resource
-                                pip install beartype 
-                                to use sql with azure """)
+except ImportError as err:
+    raise ImportError(err)
 
 
 class SQLSendData(SendToSql):
@@ -140,7 +137,7 @@ class SQLSendData(SendToSql):
         """
         self.create_sql_instance.create_sql_server_instance(**options)
 
-    def create_firewall_rule(self, **options):
+    def create_firewall_rule(self, starting_ip = None, ending_ip = None, **options):
         """
         Firewall rule is required to enable IP addresses to be able to connect to SQL
         If starting and end IP is not given, current external IP will be used to set the rule.
@@ -149,7 +146,7 @@ class SQLSendData(SendToSql):
         :param ending_ip: Up to IP for which access is allowed
         :return:
         """
-        self.create_sql_instance.create_firewall_rule(**options)
+        self.create_sql_instance.create_firewall_rule(starting_ip, ending_ip, **options)
 
     @beartype
     def connect_to_table(self,
@@ -162,16 +159,17 @@ class SQLSendData(SendToSql):
         :param options:
         :return:
         """
-        self.schema = self.connection.connect_to_table(table_name=table_name, **options)
+        self.schema, _, _ = self.connection.connect_to_table(table_name=table_name, **options)
 
     @beartype
     def commit_data(self, data: (list, dict), **options):
         """
-        Send the data to the DB that you have initialized. self.schema is necessary to be defined for this function.
+        Send single row of the data to the DB that you have initialized.
+        self.schema is necessary to be defined for this function.
         :param data: Data can be either of the type dict, or list. If data is list, all values should be provided
                      for the columns of the table, else it will raise SQL error.
                      If do not want to give values for all the columns, use dict, where an element looks like
-                     [{ 'col_name' : <col-name>, 'value' : <value> }], and it will create query for only those cols
+                     [{ 'col_name_1' : <col-name-1>, 'value-1' : <value-1> }], and it will create query for only those cols
                      or a dict can be passed {'col_name_1': 'value_1', 'col_name_2': 'value_2'....}
         :return:
         """
@@ -205,3 +203,42 @@ class SQLSendData(SendToSql):
                 query += f"'{_data}', "
             query = query[0:-2] + ")"
             execute_raw_query(self.cursor, query)
+
+    @beartype
+    def commit_batch_data(self, data: (list, pd.DataFrame), **options):
+        """
+        Commit data in batches
+        :param data:
+        :param options:
+        :return:
+        """
+        import json
+        assert self.schema, "Please provide a schema by using create_table_schema() method"
+        query = f"INSERT INTO {self.table_name} ("
+
+        if isinstance(data, list) and isinstance(data[0], dict):
+            for col_name in data[0].keys():
+                if col_name != 'create_dttm':
+                    query += f"{col_name}, "
+            query = query[0:-2] + ") VALUES "
+            quotes = "'"
+            for data_ in data:
+                query += f"({', '.join([f'{quotes + str(val) + quotes}' for val in list(data_.values())])}), "
+            query = query[0:-2]
+            execute_raw_query(self.cursor, query)
+
+        elif isinstance(data, list) and isinstance(data[0], (tuple, list)):
+            for col in self.schema:
+                if col['col_name'] != 'create_dttm':
+                    query += f"{col['col_name']}, "
+            query = query[0:-2] + ") VALUES "
+            quotes = "'"
+            for data_ in data:
+                query += f"({', '.join([f'{quotes + str(val) + quotes}' for val in data_])}), "
+            query = query[0:-2]
+            execute_raw_query(self.cursor, query)
+
+        elif isinstance(data, pd.DataFrame):
+            data_json = data.to_json(orient="records")
+            parsed = json.loads(data_json)
+            self.commit_batch_data(data = parsed)

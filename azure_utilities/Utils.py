@@ -143,26 +143,27 @@ if __name__ == "__main__":
     identity = Identity()
     identity.login(service_principal_login=True, SP_credentials=app)
 
-    # az_sql = SQLSendData(
-    #     database_name = "sajaldb",
-    #     server_name   = "sajal-server",
-    #     db_username   = "test",
-    #     db_password   = "Igobacca1@",
-    #     resource_group_name = 'sql',
-    #     table_name    = "customer",
-    #     identity      = identity
-    # )
-    #
-    # # create a new sql database
+    az_sql = SQLSendData(
+        database_name = "sajaldb",
+        server_name   = "sajal-server",
+        db_username   = "test",
+        db_password   = "Igobacca1@",
+        resource_group_name = 'sql',
+        table_name    = "customer",
+        identity      = identity
+    )
+
+    # create a new sql database
     # az_sql.create_sql_db(
     #     create_new_server=True,
     #     set_firewall_rules=True
     # )
-    #
-    # # check if the application is able to reach the DB
-    # az_sql.check_connection()
-    # # #
-    # # create a table schema
+
+    # check if the application is able to reach the DB
+    az_sql.check_connection()
+    az_sql.connect_to_table(table_name="customer")
+    # #
+    # create a table schema
     # az_sql.create_table_schema(schema_list = [
     #     {
     #         'col_name': 'CUST_ID',
@@ -173,24 +174,30 @@ if __name__ == "__main__":
     #         'datatype': 'VARCHAR(50)'
     #     }
     # ])
-    #
-    # # create a table using the schema defined
+
+    # create a table using the schema defined
     # az_sql.create_table_using_schema(table_name="customer")
-    #
-    # # az_sql.connect_to_table("customer")
-    # az_sql.commit_data(data = {
-    #     'cust_id': 50,
-    #     'name': 'sajal'
-    # })
-    #
-    # # get data from the table
-    # get_data = SQLGetData(
-    #     database_name="sajaldb",
-    #     server_name="sajal-server",
-    #     db_username="test",
-    #     db_password="Igobacca1@",
-    # )
-    # get_data.connect_to_table("customer")
+
+    # az_sql.connect_to_table("customer")
+    az_sql.commit_data(data = {
+        'cust_id': 50,
+        'name': 'sajal'
+    })
+    az_sql.commit_batch_data(data = [(60, 'sirohi'), (80, 'poplu')])
+    az_sql.commit_batch_data(data = [{
+        'cust_id': 90, 'name': 'jagriti'
+    }])
+
+    # get data from the table
+    get_data = SQLGetData(
+        database_name="sajaldb",
+        server_name="sajal-server",
+        db_username="test",
+        db_password="Igobacca1@",
+    )
+    get_data.connect_to_table("customer")
+    df = get_data.return_data()
+    print(df)
     #
     # # # Plot live data
     # # plt = PlotLiveData(get_data.return_differential_data, az_sql)

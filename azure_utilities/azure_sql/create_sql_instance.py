@@ -1,8 +1,3 @@
-import os
-import beartype
-from azure.common.credentials import ServicePrincipalCredentials
-from azure_utilities.identity import Identity
-from azure.mgmt.resource import ResourceManagementClient
 from azure.mgmt.sql import SqlManagementClient
 from .common_utils import *
 from azure.mgmt.sql.models import Sku
@@ -49,7 +44,7 @@ class CreateSQLInstance:
         print(f"server details -> {result}")
         return server_details
 
-    def create_firewall_rule(self, **options):
+    def create_firewall_rule(self, starting_ip = None, ending_ip = None, **options):
         """
         Firewall rule is required to enable IP addresses to be able to connect to SQL
         If starting and end IP is not given, current external IP will be used to set the rule.
@@ -58,10 +53,10 @@ class CreateSQLInstance:
         :return:
         """
         print("Creating Server Firewall Rule...")
-        starting_ip = ending_ip = ""
         try:
-            assert options.get('starting_ip') and options.get('ending_ip')
+            assert starting_ip and ending_ip
         except AssertionError:
+            starting_ip = ending_ip = ""
             import requests
             ip = requests.get('https://checkip.amazonaws.com').text.strip()
             print(f"Starting IP and ending IP is not given, using current IP of the system which is {ip}")

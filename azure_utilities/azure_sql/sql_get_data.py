@@ -81,20 +81,20 @@ class SQLGetData(GetFromSql, ABC):
 
     def return_data(self, return_as = None, **options):
         """
-        Get the whole data of the table
+        Get the whole data of the table and return data as pandas df
         :param return_as : pandas_df
         :return:
         """
         data = self.execute_raw_query(f"select * from {self.table_name}", return_result=True)
         if not return_as:
-            return data
-        elif return_as == 'pandas_df':
             import pandas as pd
             assert self.schema, "Provide the schema of your table or use connect_to_table() method to get the " \
                                 "schema of your table."
             columns = [val['col_name'] for val in self.schema]
             df = pd.DataFrame(data, columns=columns)
             return df
+        else:
+            return data
 
     def return_differential_data(self,
                                  differential_column = None,

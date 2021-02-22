@@ -39,6 +39,8 @@ def check_connection(jdbc_url, user_cred, **options):
 
         if not options.get('skip_table_creation'):
             print("Trying to create a temp table...")
+            curs.execute("IF OBJECT_ID('dbo.CUSTOMER_Test_Python', 'U') IS NOT NULL "
+                         "DROP TABLE dbo.CUSTOMER_Test_Python; ")
             curs.execute('create table CUSTOMER_Test_Python'
                          '("CUST_ID" INTEGER not null,'
                          ' "NAME" VARCHAR(50) not null,'
