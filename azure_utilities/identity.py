@@ -28,6 +28,16 @@ class Identity:
             raise ImportError("az.cli not present, install it first.")
         exit_code, result_dict, logs = az(args_str)
 
+        # On 0 (SUCCESS) print result_dict, otherwise get info from `logs`
+        if exit_code == 0:
+            logger.debug(f"Command Executed -> az {args_str}\n Result -> {result_dict}")
+            print(result_dict)
+            if return_result:
+                return result_dict
+        else:
+            logger.error(f"Command Executed and it failed -> az {args_str}\n Logs -> {logs}")
+            print(logs)
+
     def login(self,
               azure_username=None,
               azure_password=None,
@@ -54,7 +64,7 @@ class Identity:
         """
         logger.debug("Inside login function")
         if portal_login and not service_principal_login:
-            az_cli("login")
+            self.az_cli_("login")
         elif service_principal_login:
             logger.debug(f"Logging using service principal credentials")
 
@@ -79,7 +89,7 @@ class Identity:
             # assert name of the app is in form "http://<app-name>"
             assert SP_credentials['name'].find("http://") != -1, "Give name of app in format 'http://<app-name>'"
 
-            result = az_cli(f"login --service-principal -u {SP_credentials['name']} -p {SP_credentials['password']}"
+            result = self.az_cli_(f"login --service-principal -u {SP_credentials['name']} -p {SP_credentials['password']}"
                             f" --tenant {SP_credentials['tenant']}")
 
             # Set environment variables to for authorization and authentication
@@ -101,7 +111,7 @@ class Identity:
             assert azure_password and azure_username, "Please provide azure_password and azure_username if you " \
                                                       "are not going to login through portal and set portal_login " \
                                                       "= False "
-            az_cli(f"login -u {azure_username} -p {azure_password}")
+            self.az_cli_(f"login -u {azure_username} -p {azure_password}")
 
     def create_service_principal(self, **options):
         """
@@ -135,7 +145,7 @@ class Identity:
         skip_assignment = "--skip-assignment" if options.get('skip_assignment') else ""
 
         logger.debug(f"For service principle, name of App -> {name_of_app}")
-        service_app_cred = az_cli(f"ad sp create-for-rbac -n {name_of_app} {skip_assignment}")
+        service_app_cred = self.az_cli_(f"ad sp create-for-rbac -n {name_of_app} {skip_assignment}")
 
         print(f"Service principal details -> {service_app_cred}")
         os.environ['AZURE_CLIENT_ID'] = service_app_cred['appId']

@@ -143,65 +143,65 @@ if __name__ == "__main__":
     identity = Identity()
     identity.login(service_principal_login=True, SP_credentials=app)
 
-    az_sql = SQLSendData(
-        database_name = "sajaldb",
-        server_name   = "sajal-server",
-        db_username   = "test",
-        db_password   = "Igobacca1@",
-        resource_group_name = 'sql',
-        table_name    = "customer",
-        identity      = identity
-    )
-
-    # create a new sql database
+    # az_sql = SQLSendData(
+    #     database_name = "sajaldb",
+    #     server_name   = "sajal-server",
+    #     db_username   = "test",
+    #     db_password   = "Igobacca1@",
+    #     resource_group_name = 'sql',
+    #     table_name    = "customer",
+    #     identity      = identity
+    # )
+    #
+    # # create a new sql database
     # az_sql.create_sql_db(
     #     create_new_server=True,
     #     set_firewall_rules=True
     # )
-
-    # check if the application is able to reach the DB
-    az_sql.check_connection()
-    # #
-    # create a table schema
-    az_sql.create_table_schema(schema_list = [
-        {
-            'col_name': 'CUST_ID',
-            'datatype': 'INTEGER'
-        },
-        {
-            'col_name': 'NAME',
-            'datatype': 'VARCHAR(50)'
-        }
-    ])
-
-    # create a table using the schema defined
+    #
+    # # check if the application is able to reach the DB
+    # az_sql.check_connection()
+    # # #
+    # # create a table schema
+    # az_sql.create_table_schema(schema_list = [
+    #     {
+    #         'col_name': 'CUST_ID',
+    #         'datatype': 'INTEGER'
+    #     },
+    #     {
+    #         'col_name': 'NAME',
+    #         'datatype': 'VARCHAR(50)'
+    #     }
+    # ])
+    #
+    # # create a table using the schema defined
     # az_sql.create_table_using_schema(table_name="customer")
-
-    # az_sql.connect_to_table("customer")
-    az_sql.commit_data(data = {
-        'cust_id': 50,
-        'name': 'sajal'
-    })
-
-    # get data from the table
-    get_data = SQLGetData(
-        database_name="sajaldb",
-        server_name="sajal-server",
-        db_username="test",
-        db_password="Igobacca1@",
-    )
-    get_data.connect_to_table("customer")
-
-    # # Plot live data
-    # plt = PlotLiveData(get_data.return_differential_data, az_sql)
-    # plt.plot_data("cust_id")
-    get_data.set_alert_on_live_data(parameter_name = "cust_id", threshold = 5, alert_type = ['email'],
-                                    email_sender_credential =
-                                    {
-                                        'email_id': 'python.package.alert@gmail.com',
-                                        'password': 'Mystrongpassword1@'
-                                    },
-                                    send_to = 'sirohisajal@gmail.com')
+    #
+    # # az_sql.connect_to_table("customer")
+    # az_sql.commit_data(data = {
+    #     'cust_id': 50,
+    #     'name': 'sajal'
+    # })
+    #
+    # # get data from the table
+    # get_data = SQLGetData(
+    #     database_name="sajaldb",
+    #     server_name="sajal-server",
+    #     db_username="test",
+    #     db_password="Igobacca1@",
+    # )
+    # get_data.connect_to_table("customer")
+    #
+    # # # Plot live data
+    # # plt = PlotLiveData(get_data.return_differential_data, az_sql)
+    # # plt.plot_data("cust_id")
+    # get_data.set_alert_on_live_data(parameter_name = "cust_id", threshold = 5, alert_type = ['email'],
+    #                                 email_sender_credential =
+    #                                 {
+    #                                     'email_id': 'python.package.alert@gmail.com',
+    #                                     'password': 'Mystrongpassword1@'
+    #                                 },
+    #                                 send_to = 'sirohisajal@gmail.com')
 
     clean_up_all_resources_by_azure_functions(email_id = "python.package.alert@gmail.com",
                                               password_of_email="Mystrongpassword1@")
