@@ -1,4 +1,5 @@
 from azure_utilities.identity import Identity
+from azure_utilities.Utils import create_storage_account
 from base_classes.send_data import SendToFileStorage
 
 try:
@@ -62,42 +63,12 @@ class BlobSendData(SendToFileStorage):
         :return:
         """
         assert self.identity, "Please login to your account using identity.login() method and pass the object"
-        self.container_name = container_name or self.container_name
-
-        resource_group_name = options.get('resource_group_name') or "default_rg_python"
-        location            = options.get('location') or "centralus"
-        rg_result = self.identity.resource_client.resource_groups.create_or_update(resource_group_name,
-                                                                     {"location": location})
-        print(f"Provisioned resource group {rg_result.name}")
-        storage_client = StorageManagementClient(self.identity.credential, self.identity.subscription_id)
-
-        import random
-        storage_account_name = options.get('storage_account_name') or \
-                               f"pythonazurestorage{random.randint(1, 100000):05}"
-
-        availability_result = storage_client.storage_accounts.check_name_availability(
-            {"name": storage_account_name}
-        )
-
-        if not availability_result.name_available:
-            print(f"Storage name {storage_account_name} is already in use. Try another name.")
-            exit()
-
-        # The name is available, so provision the account
-        poller = storage_client.storage_accounts.begin_create(resource_group_name, storage_account_name,
-                                                              {
-                                                                  "location": location,
-                                                                  "kind": "StorageV2",
-                                                                  "sku": {"name": "Standard_LRS"}
-                                                              }
-                                                              )
-
-        # Long-running operations return a poller object; calling poller.result()
-        # waits for completion.
-        account_result = poller.result()
-        print(f"Provisioned storage account {account_result.name}")
-
-        keys = storage_client.storage_accounts.list_keys(resource_group_name, storage_account_name)
+        self.container_name   = container_name or self.container_name
+        meta_data             = create_storage_account(id_ = self.identity, **options)
+        keys                  = meta_data.keys
+        storage_account_name  = meta_data.storage_account_name
+        resource_group_name   = meta_data.resource_group_name
+        storage_client        = meta_data.storage_client
 
         print(f"Primary key for storage account: {keys.keys[0].value}")
 

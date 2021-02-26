@@ -6,37 +6,38 @@ from azure.common.credentials import ServicePrincipalCredentials
 from azure.mgmt.resource import ResourceManagementClient
 
 
+def az_cli_(args_str, return_result=True):
+    """
+    Execute azure ali commands
+    :param args_str: command to execute. For eg "login"
+    :param return_result: Returns the result_dict
+    :return:
+    """
+    try:
+        from az.cli import az
+    except ImportError:
+        logger.error("Use pip install az.cli")
+        print("Use pip install az.cli")
+        raise ImportError("az.cli not present, install it first.")
+    exit_code, result_dict, logs = az(args_str)
+
+    # On 0 (SUCCESS) print result_dict, otherwise get info from `logs`
+    if exit_code == 0:
+        logger.debug(f"Command Executed -> az {args_str}\n Result -> {result_dict}")
+        print(result_dict)
+        if return_result:
+            return result_dict
+    else:
+        logger.error(f"Command Executed and it failed -> az {args_str}\n Logs -> {logs}")
+        print(logs)
+
+
 class Identity:
 
     def __init__(self):
         self.resource_client = None
-        self.credentials     = None
+        self.credentials = None
         self.subscription_id = None
-
-    def az_cli_(self, args_str, return_result=True):
-        """
-        Execute azure ali commands
-        :param args_str: command to execute. For eg "login"
-        :param return_result: Returns the result_dict
-        :return:
-        """
-        try:
-            from az.cli import az
-        except ImportError:
-            logger.error("Use pip install az.cli")
-            print("Use pip install az.cli")
-            raise ImportError("az.cli not present, install it first.")
-        exit_code, result_dict, logs = az(args_str)
-
-        # On 0 (SUCCESS) print result_dict, otherwise get info from `logs`
-        if exit_code == 0:
-            logger.debug(f"Command Executed -> az {args_str}\n Result -> {result_dict}")
-            print(result_dict)
-            if return_result:
-                return result_dict
-        else:
-            logger.error(f"Command Executed and it failed -> az {args_str}\n Logs -> {logs}")
-            print(logs)
 
     def login(self,
               azure_username=None,
@@ -64,7 +65,7 @@ class Identity:
         """
         logger.debug("Inside login function")
         if portal_login and not service_principal_login:
-            self.az_cli_("login")
+            az_cli_("login")
         elif service_principal_login:
             logger.debug(f"Logging using service principal credentials")
 
@@ -89,19 +90,19 @@ class Identity:
             # assert name of the app is in form "http://<app-name>"
             assert SP_credentials['name'].find("http://") != -1, "Give name of app in format 'http://<app-name>'"
 
-            result = self.az_cli_(f"login --service-principal -u {SP_credentials['name']} -p {SP_credentials['password']}"
-                            f" --tenant {SP_credentials['tenant']}")
+            result = az_cli_(f"login --service-principal -u {SP_credentials['name']} -p {SP_credentials['password']}"
+                             f" --tenant {SP_credentials['tenant']}")
 
             # Set environment variables to for authorization and authentication
-            os.environ['AZURE_CLIENT_ID']       = SP_credentials['appId']
-            os.environ['AZURE_CLIENT_SECRET']   = SP_credentials['password']
-            os.environ['AZURE_TENANT_ID']       = SP_credentials['tenant']
+            os.environ['AZURE_CLIENT_ID'] = SP_credentials['appId']
+            os.environ['AZURE_CLIENT_SECRET'] = SP_credentials['password']
+            os.environ['AZURE_TENANT_ID'] = SP_credentials['tenant']
             os.environ['AZURE_SUBSCRIPTION_ID'] = self.subscription_id \
-                                                = result[0]['id']
+                = result[0]['id']
             self.credentials = ServicePrincipalCredentials(
-                client_id = SP_credentials['appId'],
-                secret    = SP_credentials['password'],
-                tenant    = SP_credentials['tenant']
+                client_id=SP_credentials['appId'],
+                secret=SP_credentials['password'],
+                tenant=SP_credentials['tenant']
             )
 
             self.resource_client = ResourceManagementClient(self.credentials, result[0]['id'])
@@ -111,7 +112,7 @@ class Identity:
             assert azure_password and azure_username, "Please provide azure_password and azure_username if you " \
                                                       "are not going to login through portal and set portal_login " \
                                                       "= False "
-            self.az_cli_(f"login -u {azure_username} -p {azure_password}")
+            az_cli_(f"login -u {azure_username} -p {azure_password}")
 
     def create_service_principal(self, **options):
         """
@@ -145,7 +146,7 @@ class Identity:
         skip_assignment = "--skip-assignment" if options.get('skip_assignment') else ""
 
         logger.debug(f"For service principle, name of App -> {name_of_app}")
-        service_app_cred = self.az_cli_(f"ad sp create-for-rbac -n {name_of_app} {skip_assignment}")
+        service_app_cred = az_cli_(f"ad sp create-for-rbac -n {name_of_app} {skip_assignment}")
 
         print(f"Service principal details -> {service_app_cred}")
         os.environ['AZURE_CLIENT_ID'] = service_app_cred['appId']

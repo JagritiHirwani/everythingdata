@@ -131,6 +131,57 @@ def clean_up_resources(resource_group_name):
         print(err.args)
 
 
+def create_storage_account(id_, **options):
+    """
+    Create a new storage account and get the keys for it
+    :param id_: identity object ~ azure_utilities.identity
+    :param options:
+    :return:
+    """
+    from azure.mgmt.storage import StorageManagementClient
+
+    resource_group_name = options.get('resource_group_name') or "default_rg_python"
+    location = options.get('location') or "centralus"
+    rg_result = id_.resource_client.resource_groups.create_or_update(resource_group_name,
+                                                                     {"location": location})
+    print(f"Provisioned resource group {rg_result.name}")
+    storage_client = StorageManagementClient(id_.credential, id_.subscription_id)
+
+    import random
+    storage_account_name = options.get('storage_account_name') or \
+                            f"pythonazurestorage{random.randint(1, 100000):05}"
+
+    availability_result = storage_client.storage_accounts.check_name_availability(
+        {"name": storage_account_name}
+    )
+
+    if not availability_result.name_available:
+        print(f"Storage name {storage_account_name} is already in use. Try another name.")
+        exit()
+
+    # The name is available, so provision the account
+    poller = storage_client.storage_accounts.begin_create(resource_group_name, storage_account_name,
+                                                          {
+                                                              "location": location,
+                                                              "kind": "StorageV2",
+                                                              "sku": {"name": "Standard_LRS"}
+                                                          }
+                                                          )
+
+    # Long-running operations return a poller object; calling poller.result()
+    # waits for completion.
+    account_result = poller.result()
+    print(f"Provisioned storage account {account_result.name}")
+
+    keys = storage_client.storage_accounts.list_keys(resource_group_name, storage_account_name)
+    return ({
+        'keys': keys,
+        'storage_account_name': storage_account_name,
+        'resource_group_name': resource_group_name,
+        'storage_client': storage_client
+    })
+
+
 # # SQL class Example
 if __name__ == "__main__":
     app = {

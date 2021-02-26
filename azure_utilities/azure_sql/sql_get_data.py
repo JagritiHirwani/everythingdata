@@ -113,7 +113,7 @@ class SQLGetData(GetFromSql, ABC):
         if initially_fetch_data_greater_than_this and (self.previous_diff_val != initially_fetch_data_greater_than_this)\
                 and (not self.previous_diff_val):
             self.previous_diff_val = initially_fetch_data_greater_than_this
-        else:
+        elif not self.previous_diff_val:
             self.previous_diff_val = dt.strftime(dt.now(timezone.utc) - timedelta(minutes=1), "%Y-%m-%d %H:%M:%S")
         data = self.execute_raw_query(f"select * from {self.table_name} where "
                                       f"{self.differential_column} > '{self.previous_diff_val}'",

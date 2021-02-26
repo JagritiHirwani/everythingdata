@@ -220,7 +220,7 @@ class SQLSendData(SendToSql):
             for col_name in data[0].keys():
                 if col_name != 'create_dttm':
                     query += f"{col_name}, "
-            query = query[0:-2] + ") VALUES "
+            query  = query[0:-2] + ") VALUES "
             quotes = "'"
             for data_ in data:
                 query += f"({', '.join([f'{quotes + str(val) + quotes}' for val in list(data_.values())])}), "
@@ -231,7 +231,7 @@ class SQLSendData(SendToSql):
             for col in self.schema:
                 if col['col_name'] != 'create_dttm':
                     query += f"{col['col_name']}, "
-            query = query[0:-2] + ") VALUES "
+            query  = query[0:-2] + ") VALUES "
             quotes = "'"
             for data_ in data:
                 query += f"({', '.join([f'{quotes + str(val) + quotes}' for val in data_])}), "
@@ -240,5 +240,5 @@ class SQLSendData(SendToSql):
 
         elif isinstance(data, pd.DataFrame):
             data_json = data.to_json(orient="records")
-            parsed = json.loads(data_json)
+            parsed    = json.loads(data_json)
             self.commit_batch_data(data = parsed)

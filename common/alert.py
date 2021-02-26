@@ -21,9 +21,10 @@ class Alert:
 
         assert isinstance(self.alert_type, list), "Pass alert type as a list"
 
-        self.parameter_name = parameter_name
-        self.threshold      = threshold
-        self.executed_at    = dt.utcnow() + timedelta(minutes=-3)
+        self.parameter_name   = parameter_name
+        self.threshold        = threshold
+        self.executed_at      = dt.utcnow() + timedelta(minutes=-3)
+        self.live_executed_at = dt.utcnow()
 
     @beartype
     def email_alert(self, email_sender_credential: dict, send_to: (str, list), **options):
@@ -71,3 +72,36 @@ class Alert:
         except Exception as err:
             print(f"Error in sending mail")
             raise ValueError(err.args[0])
+
+    @beartype
+    def set_alert_on_live_data(self, diff_data_func, **options):
+        """
+        Set alert on data by giving parameter name and threshold
+        :return:
+        """
+        import time
+        import pandas as pd
+
+        fetch_data_interval_seconds = options.get('fetch_data_interval_seconds') or 30
+        email_alert = True if 'email' in [val.lower() for val in self.alert_type] else False
+        while True:
+            ss = options.get('ss')
+            if ss:
+                ss.commit_batch_data([
+                    {
+                        'name': 'Jagriti', 'company': 'micro', 'hostel': 'ff21'
+                    },
+                    {
+                        'sajal': 'Yes this is sajal'
+                    }
+                ])
+            if dt.utcnow() > self.live_executed_at + timedelta(seconds=fetch_data_interval_seconds):
+                df = diff_data_func(**options)
+                df[self.parameter_name] = df[self.parameter_name].apply(pd.to_numeric)
+                if isinstance(df, pd.DataFrame) and (df[self.parameter_name] > self.threshold).any():
+                    if email_alert:
+                        self.email_alert(data=df.to_html(), **options)
+                self.live_executed_at = dt.utcnow()
+            print(f"Sleeping for {fetch_data_interval_seconds} seconds before checking again...")
+            time.sleep(fetch_data_interval_seconds)
+            print("hello, alive again")
