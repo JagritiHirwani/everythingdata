@@ -1,10 +1,10 @@
+import calendar
+import time
+
+import pandas as pd
 from beartype import beartype
 
 from azure_utilities.azure_nosql.cosmosdb.create_cosmosdb_instance import CreateCosmosdbInstance
-import calendar
-import time
-import pandas as pd
-
 from common.alert import Alert
 
 

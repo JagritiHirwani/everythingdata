@@ -1,8 +1,10 @@
+from datetime import datetime as dt, timedelta
+
+import pandas as pd
 from azure.cosmosdb.table.tableservice import TableService
 from beartype import beartype
-from datetime import datetime as dt, timedelta
+
 from common.alert import Alert
-import pandas as pd
 
 
 def sanitize_str(val):

@@ -1,9 +1,10 @@
-import names
 import os
 
-from azure_utilities import logger
+import names
 from azure.common.credentials import ServicePrincipalCredentials
 from azure.mgmt.resource import ResourceManagementClient
+
+from azure_utilities import logger
 
 
 def az_cli_(args_str, return_result=True):

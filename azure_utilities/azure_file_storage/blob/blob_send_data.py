@@ -1,5 +1,5 @@
-from azure_utilities.identity import Identity
 from azure_utilities.Utils import create_storage_account
+from azure_utilities.identity import Identity
 from base_classes.send_data import SendToFileStorage
 
 try:

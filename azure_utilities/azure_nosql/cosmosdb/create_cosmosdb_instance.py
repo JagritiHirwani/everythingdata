@@ -1,6 +1,5 @@
 import os
 from azure.cosmos import CosmosClient, PartitionKey
-from beartype import beartype
 
 
 class CreateCosmosdbInstance:
