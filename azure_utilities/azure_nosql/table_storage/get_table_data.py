@@ -2,6 +2,7 @@ from azure.cosmosdb.table.tableservice import TableService
 from beartype import beartype
 from datetime import datetime as dt, timedelta
 from common.alert import Alert
+import pandas as pd
 
 
 def sanitize_str(val):
@@ -78,6 +79,7 @@ class GetTableData:
         if isinstance(select, str):
             if select != "*":
                 select_ = select
+
         if isinstance(select, list):
             select_ = ",".join(select)
 
@@ -121,7 +123,6 @@ class GetTableData:
         if len(data) == 0:
             return []
 
-        import pandas as pd
         pd.set_option("display.max_rows", None, "display.max_columns", None)
         pandas_df = pd.DataFrame(data)
         pandas_df.sort_values(by = self.differential_column, inplace=True)

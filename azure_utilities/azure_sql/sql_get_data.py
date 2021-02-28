@@ -129,25 +129,15 @@ class SQLGetData(GetFromSql, ABC):
         return df
 
     @beartype
-    def set_alert_on_live_data(self, parameter_name : str, threshold: int, alert_type : list, **options):
+    def set_alert_on_live_data(self, parameter_name: str, threshold: int, **options):
         """
         Set alert on data by giving parameter name and threshold
         :return:
         """
-        import time
-        import pandas as pd
         alert = Alert(
-            parameter_name = parameter_name, threshold = threshold,
+            parameter_name=parameter_name, threshold=threshold, **options
         )
-        fetch_data_interval_seconds = options.get('fetch_data_interval_seconds') or 30
-        email_alert = True if 'email' in [val.lower() for val in alert_type] else False
-        while True:
-            if dt.utcnow() > self.executed_at + timedelta(seconds = fetch_data_interval_seconds):
-                data = self.return_differential_data(**options)
-                if isinstance(data, pd.DataFrame) and (data[parameter_name] > threshold).any():
-                    if email_alert:
-                        alert.email_alert(data = data.to_html(), **options)
-                self.executed_at = dt.utcnow()
-            print(f"Sleeping for {fetch_data_interval_seconds} seconds before checking again...")
-            time.sleep(fetch_data_interval_seconds)
-            print("hello, alive again")
+        alert.set_alert_on_live_data(
+            diff_data_func = self.return_differential_data,
+            **options
+        )

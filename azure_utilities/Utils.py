@@ -257,8 +257,8 @@ if __name__ == "__main__":
     print(df)
     #
     # # # Plot live data
-    # # plt = PlotLiveData(get_data.return_differential_data, az_sql)
-    # # plt.plot_data("cust_id")
+    # plt = PlotLiveData(get_data.return_differential_data, az_sql)
+    # plt.plot_data("cust_id")
     # get_data.set_alert_on_live_data(parameter_name = "cust_id", threshold = 5, alert_type = ['email'],
     #                                 email_sender_credential =
     #                                 {
