@@ -89,9 +89,9 @@ class PlotLiveData:
         app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
         app.layout = html.Div(
             html.Div([
-                html.H4('Python IoT Live Dashboard'),
-                html.Div(id='live-update-text'),
-                dcc.Graph(id='live-update-graph'),
+                html.H4(options.get('title') or 'Python IoT Live Dashboard'),
+                html.Div(id='live-update-text', style={'textAlign': 'center'}),
+                dcc.Graph(id='live-update-graph', figure={'layout': {'height': options.get('height_of_graph') or 600}}),
                 dcc.Interval(
                     id='interval-component',
                     interval=refresh_rate_sec * 1000,  # in milliseconds
@@ -114,16 +114,16 @@ class PlotLiveData:
                 ss.commit_batch_data([
                     {
                         'name': f'john-{self.itr}', 'company': 'micro', 'hostel': 'ff21',
-                        'itr': self.itr + random.randint(0, 20), 'itr_': 1.87 * self.itr + 4 * random.randint(0, 20)
+                        'itr': self.itr + random.randint(0, 20), 'itr_': 1.87 * self.itr + 4 * random.randint(0, 20),
+                        'val': self.itr
                     }
                 ])
                 print("sent the data")
             global DATA_JSON
             data = self.streaming_data_function()
-            style = {'padding': '5px', 'fontSize': '20px'}
+            style = {'padding': '5px', 'fontSize': '20px', 'marginRight': '10px', 'marginLeft': '10px'}
             if isinstance(data, pd.DataFrame) and not data.empty:
                 DATA_JSON = json.loads(data.to_json(orient="records"))[-1]
-                print(DATA_JSON)
                 return [
                     html.Span(f'{col} : {DATA_JSON[col]}', style=style) for col in columns_to_plot
                 ]
@@ -142,9 +142,9 @@ class PlotLiveData:
             print(f"latest data tp plot ->", data_to_plot)
 
             # Create the graph with subplots
-            fig = plotly.tools.make_subplots(rows=len(columns_to_plot), cols=1, vertical_spacing=0.2)
+            fig = plotly.tools.make_subplots(rows=len(columns_to_plot), cols=1, vertical_spacing=0.1)
             fig['layout']['margin'] = {
-                'l': 30, 'r': 10, 'b': 30, 't': 10
+                'l': 30, 'r': 10, 'b': 50, 't': 10
             }
             fig['layout']['legend'] = {'x': 0, 'y': 1, 'xanchor': 'left'}
             for i in range(len(columns_to_plot)):

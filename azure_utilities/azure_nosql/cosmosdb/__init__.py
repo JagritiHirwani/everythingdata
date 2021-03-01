@@ -44,4 +44,4 @@ if __name__ == "__main__":
 
     plt = PlotLiveData(gg.return_differential_data)
     # plt.plot_data("itr", ss=ss)
-    plt.dash_plot(["itr", "itr_"], ss=ss)
+    plt.dash_plot(["itr", "itr_", "val"], ss=ss)
