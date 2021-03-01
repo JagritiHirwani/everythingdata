@@ -11,7 +11,7 @@ if __name__ == "__main__":
         partition_key_path="/name"
     )
     # ss.commit_batch_data(data = [
-    #     {'name': 'sirohi', 'last_name': 'hehe part 2 '},
+    #     {'name': 'sirohi', 'last_name': 'hehe part 2'},
     #     {'name': 'sajal', 'last_name': 'john smith'},
     #     ]
     # )
@@ -38,8 +38,10 @@ if __name__ == "__main__":
     #                               'password': 'Mystrongpassword1@'
     #                           },
     #                           send_to='sirohisajal@gmail.com',
-    #                           ss=ss
+    #                           ss=ss,
+    #                           lesser_than = 3
     #                           )
 
     plt = PlotLiveData(gg.return_differential_data)
-    plt.plot_data("itr", ss=ss)
+    # plt.plot_data("itr", ss=ss)
+    plt.dash_plot(["itr", "itr_"], ss=ss)
