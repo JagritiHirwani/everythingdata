@@ -1,1 +1,16 @@
 .idea
+venv/
+
+azure_utilities/__pycache__/
+azure_utilities/logs/
+
+ common/__pycache__/
+.DS_Store
+
+azure_utilities/azure_sql/__pycache__
+
+*/logs/*
+*/logs
+azure_utilities/azure_file_storage/blob/logs/
+
+logs
