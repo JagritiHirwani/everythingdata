@@ -70,18 +70,4 @@ def get_jar_path(version=8):
 
 
 if __name__ == "__main__":
-    from pprint import pprint
-    sql_conn, sql_curs = check_connection(
-        "jdbc:sqlserver://dbsed4527.ms.ds.uhc.com:1433;database=MBM_DEV_DB",
-        user_cred={'user' : "mbmdevdb", 'password': 'M(W;X}ekp6W@J_'},
-        skip_table_creation=True
-    )
-
-    sql_curs.execute("select top 6 * from mbm.OC_MTHLY_RPT")
-    data = set(sql_curs.fetchall())
-
-    sql_curs.execute("select top 5 * from mbm.OC_MTHLY_RPT")
-    data1 = set(sql_curs.fetchall())
-    data_diff = data - data1
-    pprint(data_diff)
-    pprint(data1-data)
+    pass

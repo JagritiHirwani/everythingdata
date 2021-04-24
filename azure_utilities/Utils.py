@@ -205,29 +205,29 @@ if __name__ == "__main__":
     )
 
     # create a new sql database
-    # az_sql.create_sql_db(
-    #     create_new_server=True,
-    #     set_firewall_rules=True
-    # )
+    az_sql.create_sql_db(
+        create_new_server=True,
+        set_firewall_rules=True
+    )
 
     # check if the application is able to reach the DB
     az_sql.check_connection()
     az_sql.connect_to_table(table_name="customer")
     # #
     # create a table schema
-    # az_sql.create_table_schema(schema_list = [
-    #     {
-    #         'col_name': 'CUST_ID',
-    #         'datatype': 'INTEGER'
-    #     },
-    #     {
-    #         'col_name': 'NAME',
-    #         'datatype': 'VARCHAR(50)'
-    #     }
-    # ])
+    az_sql.create_table_schema(schema_list = [
+        {
+            'col_name': 'CUST_ID',
+            'datatype': 'INTEGER'
+        },
+        {
+            'col_name': 'NAME',
+            'datatype': 'VARCHAR(50)'
+        }
+    ])
 
     # create a table using the schema defined
-    # az_sql.create_table_using_schema(table_name="customer")
+    az_sql.create_table_using_schema(table_name="customer")
 
     # az_sql.connect_to_table("customer")
     az_sql.commit_data(data = {
@@ -267,6 +267,6 @@ if __name__ == "__main__":
     #                                 },
     #                                 send_to = 'sirohisajal@gmail.com')
 
-    # clean_up_all_resources_by_azure_functions(email_id = "python.package.alert@gmail.com",
-    #                                           password_of_email="Mystrongpassword1@")
-    clean_up_resources("sql")
+    clean_up_all_resources_by_azure_functions(email_id = "python.package.alert@gmail.com",
+                                              password_of_email="Mystrongpassword1@")
+    # clean_up_resources("sql")

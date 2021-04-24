@@ -1,4 +1,6 @@
 from common.plot_live_data import PlotLiveData
+from azure.iot.device import IoTHubDeviceClient
+
 
 if __name__ == "__main__":
     from azure_utilities.azure_nosql.cosmosdb.send_cosmos_data import SendCosmosData
@@ -21,16 +23,6 @@ if __name__ == "__main__":
     )
     # data = gg.get_all_data()
 
-    # while True:
-    #     itr += 1
-    #     ss.commit_batch_data({
-    #         'name-': f'sajal-{itr}',
-    #         'itr': itr
-    #     })
-    #     data_ = gg.return_differential_data()
-    #     print(data_)
-    #     time.sleep(3)
-
     # gg.set_alert_on_live_data(parameter_name="itr", threshold=2,
     #                           email_sender_credential=
     #                           {
@@ -42,6 +34,7 @@ if __name__ == "__main__":
     #                           lesser_than = 3
     #                           )
 
+    # # Plot your data
     plt = PlotLiveData(gg.return_differential_data)
     # plt.plot_data("itr", ss=ss)
     plt.dash_plot(["itr", "itr_", "val"], ss=ss)
